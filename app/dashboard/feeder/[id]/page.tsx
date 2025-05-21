@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { LogoutButton } from "@/components/logout-button";
 import { Card } from "@/components/ui/card";
 import {
   Activity,
@@ -128,12 +127,6 @@ export default async function FeederPage({
               </h1>
               <p className="text-sm text-gray-600">{feeder.location}</p>
             </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              Welcome, {data.user.email}
-            </span>
-            <LogoutButton />
           </div>
         </div>
 
