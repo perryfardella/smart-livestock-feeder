@@ -93,8 +93,9 @@ const feedingStations = {
 export default async function FeederPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const resolvedParams = await params;
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.getUser();
@@ -102,7 +103,8 @@ export default async function FeederPage({
     redirect("/auth/login");
   }
 
-  const feeder = feedingStations[params.id as keyof typeof feedingStations];
+  const feeder =
+    feedingStations[resolvedParams.id as keyof typeof feedingStations];
   if (!feeder) {
     redirect("/dashboard");
   }
