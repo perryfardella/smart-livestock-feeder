@@ -19,8 +19,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Header />
-        {children}
+        <div className="flex flex-col min-h-screen">
+          <Header />
+          {children}
+          <footer className="py-8 px-4 sm:px-6 lg:px-8 ">
+            <div className="max-w-7xl mx-auto text-center">
+              <p>© 2025 SmartFeeder. All rights reserved.</p>
+            </div>
+          </footer>
+        </div>
       </body>
     </html>
   );
