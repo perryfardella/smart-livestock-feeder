@@ -78,12 +78,14 @@ const feedingStations = {
   },
 };
 
-export default async function FeederPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const feeder = feedingStations[params.id as keyof typeof feedingStations];
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function FeederPage({ params }: PageProps) {
+  const resolvedParams = await params;
+  const feeder =
+    feedingStations[resolvedParams.id as keyof typeof feedingStations];
   if (!feeder) {
     redirect("/dashboard");
   }
