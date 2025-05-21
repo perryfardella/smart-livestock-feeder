@@ -6,32 +6,50 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowRight, Camera, Clock, Zap } from "lucide-react";
+import { Camera, Clock, Zap } from "lucide-react";
+import Image from "next/image";
 
 export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Hero Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 tracking-tight">
-              SmartFeeder
-            </h1>
-            <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">
-              Empowering hobby farmers with smart, remote feeder management.
-              Monitor your animals, control feeding, and ensure their well-being
-              from anywhere.
+      {/* Hero Section with Waitlist CTA */}
+      <section className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50 flex items-center justify-center">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 tracking-tight mb-6">
+            SmartFeeder
+          </h1>
+          <p className="mt-4 text-xl text-gray-700 max-w-2xl mx-auto mb-10">
+            Take the stress out of animal care. SmartFeeder lets you monitor,
+            schedule, and control your feeders from anywhere—giving you peace of
+            mind and more time for what matters. Perfect for hobby farmers and
+            property owners who want to ensure their animals are always fed and
+            happy, even when life gets busy.
+          </p>
+          <div className="bg-white/80 rounded-xl shadow-lg p-6 sm:p-8 max-w-xl mx-auto">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Join the Waitlist
+            </h2>
+            <p className="text-lg text-gray-600 mb-6">
+              Be the first to know when we launch and get exclusive early
+              access.
             </p>
-            <div className="mt-10 flex justify-center gap-4">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4" />
+            <form className="flex flex-col sm:flex-row gap-4">
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                className="flex-1"
+                required
+              />
+              <Button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-4"
+              >
+                Join Waitlist
               </Button>
-              <Button size="lg" variant="outline">
-                Learn More
-              </Button>
-            </div>
+            </form>
+            <p className="mt-4 text-sm text-gray-500">
+              We&apos;ll never share your email with anyone else.
+            </p>
           </div>
         </div>
       </section>
@@ -45,6 +63,14 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <Card>
               <CardHeader>
+                <div className="relative h-48 mb-4 rounded-lg overflow-hidden">
+                  <Image
+                    src="https://images.unsplash.com/photo-1592982537447-7440770cbfc9?q=80&w=2070"
+                    alt="Sheep in a field, Australian livestock"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
                 <Camera className="h-8 w-8 text-blue-600 mb-4" />
                 <CardTitle>Live Monitoring</CardTitle>
                 <CardDescription>
@@ -55,6 +81,14 @@ export default function Home() {
             </Card>
             <Card>
               <CardHeader>
+                <div className="relative h-48 mb-4 rounded-lg overflow-hidden">
+                  <Image
+                    src="https://images.unsplash.com/photo-1500595046743-cd271d694d30?q=80&w=2070"
+                    alt="Farm animals feeding"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
                 <Clock className="h-8 w-8 text-blue-600 mb-4" />
                 <CardTitle>Smart Scheduling</CardTitle>
                 <CardDescription>
@@ -65,6 +99,14 @@ export default function Home() {
             </Card>
             <Card>
               <CardHeader>
+                <div className="relative h-48 mb-4 rounded-lg overflow-hidden">
+                  <Image
+                    src="https://images.unsplash.com/photo-1546445317-29f4545e9d53?q=80&w=2070"
+                    alt="Happy farm animals"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
                 <Zap className="h-8 w-8 text-blue-600 mb-4" />
                 <CardTitle>Instant Control</CardTitle>
                 <CardDescription>
@@ -73,33 +115,6 @@ export default function Home() {
               </CardHeader>
             </Card>
           </div>
-        </div>
-      </section>
-
-      {/* Email Signup Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Stay Updated
-          </h2>
-          <p className="text-lg text-gray-600 mb-8">
-            Join our waitlist to be the first to know when we launch and get
-            exclusive early access.
-          </p>
-          <form className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto">
-            <Input
-              type="email"
-              placeholder="Enter your email"
-              className="flex-1"
-              required
-            />
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-              Join Waitlist
-            </Button>
-          </form>
-          <p className="mt-4 text-sm text-gray-500">
-            We&apos;ll never share your email with anyone else.
-          </p>
         </div>
       </section>
 
