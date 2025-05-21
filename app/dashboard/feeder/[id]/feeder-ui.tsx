@@ -12,6 +12,7 @@ import {
   Camera,
   Utensils,
   Wifi,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,19 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { FeederForm } from "./feeder-form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useRouter } from "next/navigation";
 
 type Feeder = {
   id: string;
@@ -52,6 +66,19 @@ type Feeder = {
 };
 
 export function FeederUI({ feeder }: { feeder: Feeder }) {
+  const router = useRouter();
+
+  const handleDelete = async () => {
+    try {
+      // In a real implementation, this would delete from your database
+      console.log("Deleting feeder:", feeder.id);
+      toast.success("Feeder deleted successfully");
+      router.push("/dashboard");
+    } catch {
+      toast.error("Failed to delete feeder");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-7xl">
@@ -75,6 +102,44 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
 
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-2 sm:gap-4">
+            <FeederForm
+              mode="edit"
+              feeder={feeder}
+              onSubmit={async (data) => {
+                // In a real implementation, this would update your database
+                console.log("Updated feeder:", { ...feeder, ...data });
+                toast.success("Feeder updated successfully");
+              }}
+            />
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  className="flex items-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Delete Feeder</span>
+                  <span className="sm:hidden">Delete</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete
+                    the feeder and all its associated data.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
             <Button
               variant="outline"
               className="flex items-center gap-2"

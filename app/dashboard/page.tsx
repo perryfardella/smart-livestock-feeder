@@ -10,6 +10,7 @@ import {
   Wifi,
 } from "lucide-react";
 import Link from "next/link";
+import { FeederForm } from "./feeder/[id]/feeder-form";
 
 // Sample data - In real implementation, this would come from your database
 const feedingStations = [
@@ -73,10 +74,18 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-8 flex items-center">
+        <div className="mb-8 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-900">
             Smart Livestock Dashboard
           </h1>
+          <FeederForm
+            mode="create"
+            onSubmit={async (data) => {
+              "use server";
+              // In a real implementation, this would save to your database
+              console.log("New feeder:", data);
+            }}
+          />
         </div>
 
         {/* Feeding Stations Grid */}
