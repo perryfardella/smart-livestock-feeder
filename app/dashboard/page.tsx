@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { LogoutButton } from "@/components/logout-button";
 import { Card } from "@/components/ui/card";
 import { Clock, Droplet, Battery, AlertCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
