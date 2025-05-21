@@ -55,7 +55,7 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+          <div className="flex flex-col gap-2 sm:gap-4">
             <Link
               href="/dashboard"
               className="flex items-center text-blue-600 hover:text-blue-800"

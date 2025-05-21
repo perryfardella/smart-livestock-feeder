@@ -63,15 +63,10 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex items-center">
           <h1 className="text-3xl font-bold text-gray-900">
             Smart Livestock Dashboard
           </h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              Welcome, {data.user.email}
-            </span>
-          </div>
         </div>
 
         {/* Feeding Stations Grid */}
