@@ -1,7 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
-import { Clock, Droplet, Battery, AlertCircle, ArrowRight } from "lucide-react";
+import {
+  Clock,
+  Droplet,
+  Battery,
+  AlertCircle,
+  ArrowRight,
+  Wifi,
+} from "lucide-react";
 import Link from "next/link";
 
 // Sample data - In real implementation, this would come from your database
@@ -16,6 +23,7 @@ const feedingStations = [
     waterLevel: 75,
     temperature: 24,
     batteryLevel: 85,
+    connectivityStrength: 90,
     alerts: [
       { id: 1, message: "Water level below 80%", severity: "warning" },
       {
@@ -35,6 +43,7 @@ const feedingStations = [
     waterLevel: 90,
     temperature: 22,
     batteryLevel: 95,
+    connectivityStrength: 75,
     alerts: [],
   },
   {
@@ -47,6 +56,7 @@ const feedingStations = [
     waterLevel: 60,
     temperature: 25,
     batteryLevel: 45,
+    connectivityStrength: 45,
     alerts: [{ id: 1, message: "Battery level critical", severity: "error" }],
   },
 ];
@@ -131,15 +141,29 @@ export default async function DashboardPage() {
                       </span>
                     </div>
 
-                    {station.alerts.length > 0 && (
-                      <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 p-2">
-                        <AlertCircle className="h-4 w-4 text-red-500" />
-                        <span className="text-sm text-red-600">
-                          {station.alerts.length} alert
-                          {station.alerts.length > 1 ? "s" : ""}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Wifi className="h-5 w-5 text-purple-500" />
+                        <span className="text-sm text-gray-600">
+                          Connectivity
                         </span>
                       </div>
-                    )}
+                      <span className="text-sm font-medium">
+                        {station.connectivityStrength}%
+                      </span>
+                    </div>
+
+                    <div className="min-h-[2.5rem]">
+                      {station.alerts.length > 0 && (
+                        <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 p-2">
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                          <span className="text-sm text-red-600">
+                            {station.alerts.length} alert
+                            {station.alerts.length > 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
                     <div className="mt-4 flex items-center justify-end text-blue-600">
                       <span className="text-sm font-medium">View Details</span>

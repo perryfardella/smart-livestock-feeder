@@ -13,6 +13,7 @@ const feedingStations = {
     waterLevel: 75,
     temperature: 24,
     batteryLevel: 85,
+    connectivityStrength: 90,
     alerts: [
       { id: 1, message: "Water level below 80%", severity: "warning" },
       {
@@ -42,6 +43,7 @@ const feedingStations = {
     waterLevel: 90,
     temperature: 22,
     batteryLevel: 95,
+    connectivityStrength: 75,
     alerts: [],
     feedingSchedule: [
       { time: "07:00", amount: "2.0kg" },
@@ -64,6 +66,7 @@ const feedingStations = {
     waterLevel: 60,
     temperature: 25,
     batteryLevel: 45,
+    connectivityStrength: 45,
     alerts: [{ id: 1, message: "Battery level critical", severity: "error" }],
     feedingSchedule: [
       { time: "05:00", amount: "3.0kg" },

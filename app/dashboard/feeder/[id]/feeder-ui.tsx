@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   Camera,
   Utensils,
+  Wifi,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ type Feeder = {
   waterLevel: number;
   temperature: number;
   batteryLevel: number;
+  connectivityStrength: number;
   alerts: Array<{
     id: number;
     message: string;
@@ -108,7 +110,7 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
         </div>
 
         {/* Status Cards */}
-        <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
           <Card className="p-6">
             <div className="flex items-center gap-4">
               <Clock className="h-8 w-8 text-blue-500" />
@@ -142,6 +144,17 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
               <div>
                 <p className="text-sm text-gray-600">Battery Level</p>
                 <p className="text-2xl font-semibold">{feeder.batteryLevel}%</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-6">
+            <div className="flex items-center gap-4">
+              <Wifi className="h-8 w-8 text-purple-500" />
+              <div>
+                <p className="text-sm text-gray-600">Connectivity</p>
+                <p className="text-2xl font-semibold">
+                  {feeder.connectivityStrength}%
+                </p>
               </div>
             </div>
           </Card>
