@@ -23,9 +23,48 @@ const feedingStations = {
       },
     ],
     feedingSchedule: [
-      { time: "06:00", amount: "2.5kg" },
-      { time: "12:00", amount: "2.5kg" },
-      { time: "18:00", amount: "2.5kg" },
+      {
+        id: "schedule-1",
+        time: "06:00",
+        amount: "2.5kg",
+        days: [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday",
+        ],
+      },
+      {
+        id: "schedule-2",
+        time: "12:00",
+        amount: "2.5kg",
+        days: [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday",
+        ],
+      },
+      {
+        id: "schedule-3",
+        time: "18:00",
+        amount: "2.5kg",
+        days: [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday",
+        ],
+      },
     ],
     dailyStats: {
       totalFeed: "7.5kg",
@@ -46,9 +85,24 @@ const feedingStations = {
     connectivityStrength: 75,
     alerts: [],
     feedingSchedule: [
-      { time: "07:00", amount: "2.0kg" },
-      { time: "13:00", amount: "2.0kg" },
-      { time: "19:00", amount: "2.0kg" },
+      {
+        id: "schedule-4",
+        time: "07:00",
+        amount: "2.0kg",
+        days: ["Monday", "Wednesday", "Friday"],
+      },
+      {
+        id: "schedule-5",
+        time: "13:00",
+        amount: "2.0kg",
+        days: ["Monday", "Wednesday", "Friday"],
+      },
+      {
+        id: "schedule-6",
+        time: "19:00",
+        amount: "2.0kg",
+        days: ["Monday", "Wednesday", "Friday"],
+      },
     ],
     dailyStats: {
       totalFeed: "6.0kg",
@@ -69,9 +123,24 @@ const feedingStations = {
     connectivityStrength: 45,
     alerts: [{ id: 1, message: "Battery level critical", severity: "error" }],
     feedingSchedule: [
-      { time: "05:00", amount: "3.0kg" },
-      { time: "11:00", amount: "3.0kg" },
-      { time: "17:00", amount: "3.0kg" },
+      {
+        id: "schedule-7",
+        time: "05:00",
+        amount: "3.0kg",
+        days: ["Tuesday", "Thursday", "Saturday", "Sunday"],
+      },
+      {
+        id: "schedule-8",
+        time: "11:00",
+        amount: "3.0kg",
+        days: ["Tuesday", "Thursday", "Saturday", "Sunday"],
+      },
+      {
+        id: "schedule-9",
+        time: "17:00",
+        amount: "3.0kg",
+        days: ["Tuesday", "Thursday", "Saturday", "Sunday"],
+      },
     ],
     dailyStats: {
       totalFeed: "9.0kg",

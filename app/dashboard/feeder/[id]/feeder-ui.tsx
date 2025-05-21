@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { FeederForm } from "./feeder-form";
+import { ScheduleForm, type Schedule } from "./schedule-form";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,10 +55,7 @@ type Feeder = {
     message: string;
     severity: string;
   }>;
-  feedingSchedule: Array<{
-    time: string;
-    amount: string;
-  }>;
+  feedingSchedule: Schedule[];
   dailyStats: {
     totalFeed: string;
     waterConsumption: string;
@@ -77,6 +75,27 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
     } catch {
       toast.error("Failed to delete feeder");
     }
+  };
+
+  const handleScheduleSubmit = async (data: Omit<Schedule, "id">) => {
+    // In a real implementation, this would save to your database
+    console.log("New schedule:", data);
+    toast.success("Schedule added successfully");
+  };
+
+  const handleScheduleEdit = async (
+    scheduleId: string,
+    data: Omit<Schedule, "id">
+  ) => {
+    // In a real implementation, this would update your database
+    console.log("Updated schedule:", { id: scheduleId, ...data });
+    toast.success("Schedule updated successfully");
+  };
+
+  const handleScheduleDelete = async (scheduleId: string) => {
+    // In a real implementation, this would delete from your database
+    console.log("Deleting schedule:", scheduleId);
+    toast.success("Schedule deleted successfully");
   };
 
   return (
@@ -229,18 +248,46 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Feeding Schedule */}
           <Card className="p-6 lg:col-span-2">
-            <h2 className="mb-4 text-xl font-semibold">Feeding Schedule</h2>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Feeding Schedule</h2>
+              <ScheduleForm mode="create" onSubmit={handleScheduleSubmit} />
+            </div>
             <div className="space-y-4">
-              {feeder.feedingSchedule.map((schedule, index) => (
+              {feeder.feedingSchedule.map((schedule) => (
                 <div
-                  key={index}
+                  key={schedule.id}
                   className="flex items-center justify-between rounded-lg bg-gray-50 p-4"
                 >
                   <div className="flex items-center gap-3">
                     <Activity className="h-5 w-5 text-blue-500" />
-                    <span className="font-medium">{schedule.time}</span>
+                    <div>
+                      <span className="font-medium">{schedule.time}</span>
+                      <p className="text-sm text-gray-600">
+                        {schedule.days.length === 7
+                          ? "Daily"
+                          : schedule.days.map((d) => d.slice(0, 3)).join(", ")}
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-gray-600">{schedule.amount}</span>
+                  <div className="flex items-center gap-4">
+                    <span className="text-gray-600">{schedule.amount}</span>
+                    <div className="flex gap-2">
+                      <ScheduleForm
+                        mode="edit"
+                        schedule={schedule}
+                        onSubmit={(data) =>
+                          handleScheduleEdit(schedule.id, data)
+                        }
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleScheduleDelete(schedule.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
