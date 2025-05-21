@@ -38,7 +38,15 @@ export function Header() {
           </Link>
           <nav className="flex items-center gap-4">
             {isAuthenticated ? (
-              <LogoutButton />
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/dashboard"
+                  className="text-sm font-medium hover:underline"
+                >
+                  Dashboard
+                </Link>
+                <LogoutButton />
+              </div>
             ) : (
               <>
                 <Button variant="ghost">
