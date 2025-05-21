@@ -6,12 +6,6 @@
 
 ---
 
-## Change History
-
-_To be updated as changes are made_
-
----
-
 ## Overview
 
 The SmartFeeder Web App enables hobby farmers and property owners in Australia to remotely monitor and control animal feeders. It provides features like viewing live camera feeds (mocked initially), manually releasing feed, and setting automatic feeding schedules. The app aims to offer convenience and peace of mind for users managing livestock such as horses, cows, or chickens, particularly when they are away from their properties.
