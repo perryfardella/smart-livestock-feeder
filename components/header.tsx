@@ -31,7 +31,7 @@ export function Header() {
 
   return (
     <header className="border-b">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <Link href="/" className="text-xl font-bold">
             SmartFeeder

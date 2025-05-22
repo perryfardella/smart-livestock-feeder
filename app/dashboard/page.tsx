@@ -71,120 +71,114 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Smart Livestock Dashboard
-          </h1>
-          <FeederForm
-            mode="create"
-            onSubmit={async (data) => {
-              "use server";
-              // In a real implementation, this would save to your database
-              console.log("New feeder:", data);
-            }}
-          />
-        </div>
+    <>
+      {/* Header */}
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-900">
+          Smart Livestock Dashboard
+        </h1>
+        <FeederForm
+          mode="create"
+          onSubmit={async (data) => {
+            "use server";
+            // In a real implementation, this would save to your database
+            console.log("New feeder:", data);
+          }}
+        />
+      </div>
 
-        {/* Feeding Stations Grid */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {feedingStations.map((station) => (
-            <Link href={`/dashboard/feeder/${station.id}`} key={station.id}>
-              <Card className="h-full cursor-pointer transition-all hover:shadow-lg">
-                <div className="p-6">
-                  <div className="mb-4 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-xl font-semibold">{station.name}</h2>
-                      <p className="text-sm text-gray-600">
-                        {station.location}
-                      </p>
-                    </div>
-                    <div
-                      className={`rounded-full px-3 py-1 text-sm ${
-                        station.status === "active"
-                          ? "bg-green-100 text-green-800"
-                          : station.status === "maintenance"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {station.status.charAt(0).toUpperCase() +
-                        station.status.slice(1)}
-                    </div>
+      {/* Feeding Stations Grid */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {feedingStations.map((station) => (
+          <Link href={`/dashboard/feeder/${station.id}`} key={station.id}>
+            <Card className="h-full cursor-pointer transition-all hover:shadow-lg">
+              <div className="p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold">{station.name}</h2>
+                    <p className="text-sm text-gray-600">{station.location}</p>
                   </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-5 w-5 text-blue-500" />
-                        <span className="text-sm text-gray-600">
-                          Next Feeding
-                        </span>
-                      </div>
-                      <span className="text-sm font-medium">
-                        {station.nextFeeding}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Droplet className="h-5 w-5 text-blue-500" />
-                        <span className="text-sm text-gray-600">
-                          Water Level
-                        </span>
-                      </div>
-                      <span className="text-sm font-medium">
-                        {station.waterLevel}%
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Battery className="h-5 w-5 text-green-500" />
-                        <span className="text-sm text-gray-600">Battery</span>
-                      </div>
-                      <span className="text-sm font-medium">
-                        {station.batteryLevel}%
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Wifi className="h-5 w-5 text-purple-500" />
-                        <span className="text-sm text-gray-600">
-                          Connectivity
-                        </span>
-                      </div>
-                      <span className="text-sm font-medium">
-                        {station.connectivityStrength}%
-                      </span>
-                    </div>
-
-                    <div className="min-h-[2.5rem]">
-                      {station.alerts.length > 0 && (
-                        <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 p-2">
-                          <AlertCircle className="h-4 w-4 text-red-500" />
-                          <span className="text-sm text-red-600">
-                            {station.alerts.length} alert
-                            {station.alerts.length > 1 ? "s" : ""}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-4 flex items-center justify-end text-blue-600">
-                      <span className="text-sm font-medium">View Details</span>
-                      <ArrowRight className="ml-1 h-4 w-4" />
-                    </div>
+                  <div
+                    className={`rounded-full px-3 py-1 text-sm ${
+                      station.status === "active"
+                        ? "bg-green-100 text-green-800"
+                        : station.status === "maintenance"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {station.status.charAt(0).toUpperCase() +
+                      station.status.slice(1)}
                   </div>
                 </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-blue-500" />
+                      <span className="text-sm text-gray-600">
+                        Next Feeding
+                      </span>
+                    </div>
+                    <span className="text-sm font-medium">
+                      {station.nextFeeding}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Droplet className="h-5 w-5 text-blue-500" />
+                      <span className="text-sm text-gray-600">Water Level</span>
+                    </div>
+                    <span className="text-sm font-medium">
+                      {station.waterLevel}%
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Battery className="h-5 w-5 text-green-500" />
+                      <span className="text-sm text-gray-600">Battery</span>
+                    </div>
+                    <span className="text-sm font-medium">
+                      {station.batteryLevel}%
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Wifi className="h-5 w-5 text-purple-500" />
+                      <span className="text-sm text-gray-600">
+                        Connectivity
+                      </span>
+                    </div>
+                    <span className="text-sm font-medium">
+                      {station.connectivityStrength}%
+                    </span>
+                  </div>
+
+                  <div className="min-h-[2.5rem]">
+                    {station.alerts.length > 0 && (
+                      <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 p-2">
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                        <span className="text-sm text-red-600">
+                          {station.alerts.length} alert
+                          {station.alerts.length > 1 ? "s" : ""}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-end text-blue-600">
+                    <span className="text-sm font-medium">View Details</span>
+                    <ArrowRight className="ml-1 h-4 w-4" />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </Link>
+        ))}
       </div>
-    </div>
+    </>
   );
 }
