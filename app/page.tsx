@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardDescription,
@@ -33,20 +32,20 @@ export default function Home() {
               Be the first to know when we launch and get exclusive early
               access.
             </p>
-            <form className="flex flex-col sm:flex-row gap-4">
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1"
-                required
-              />
+            <div className="flex justify-center">
               <Button
-                type="submit"
+                asChild
                 className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-4"
               >
-                Join Waitlist
+                <a
+                  href="https://tally.so/r/3Ny9BN"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Join Waitlist
+                </a>
               </Button>
-            </form>
+            </div>
             <p className="mt-4 text-sm text-gray-500">
               We&apos;ll never share your email with anyone else.
             </p>
