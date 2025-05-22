@@ -67,7 +67,9 @@ export default function Home() {
                   <Image
                     src="https://images.unsplash.com/photo-1592982537447-7440770cbfc9?q=80&w=2070"
                     alt="Sheep in a field, Australian livestock"
-                    fill
+                    width={800}
+                    height={600}
+                    priority={true}
                     className="object-cover"
                   />
                 </div>
@@ -85,7 +87,9 @@ export default function Home() {
                   <Image
                     src="https://images.unsplash.com/photo-1500595046743-cd271d694d30?q=80&w=2070"
                     alt="Farm animals feeding"
-                    fill
+                    width={800}
+                    height={600}
+                    loading="lazy"
                     className="object-cover"
                   />
                 </div>
@@ -103,7 +107,9 @@ export default function Home() {
                   <Image
                     src="https://images.unsplash.com/photo-1546445317-29f4545e9d53?q=80&w=2070"
                     alt="Happy farm animals"
-                    fill
+                    width={800}
+                    height={600}
+                    loading="lazy"
                     className="object-cover"
                   />
                 </div>
