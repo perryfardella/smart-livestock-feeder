@@ -45,6 +45,12 @@ export function Header() {
                 >
                   Dashboard
                 </Link>
+                <Link
+                  href="/iot-data"
+                  className="text-sm font-medium hover:underline"
+                >
+                  IoT Data
+                </Link>
                 <LogoutButton />
               </div>
             ) : (
