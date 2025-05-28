@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type SensorData = {
   id: number;
+  topic: string;
   sensor: string;
   value: number;
   timestamp: string;
@@ -77,6 +78,7 @@ export default function IoTDataPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Topic</TableHead>
                   <TableHead>Sensor</TableHead>
                   <TableHead>Value</TableHead>
                   <TableHead>Timestamp</TableHead>
@@ -85,6 +87,7 @@ export default function IoTDataPage() {
               <TableBody>
                 {sensorData.map((data) => (
                   <TableRow key={data.id}>
+                    <TableCell>{data.topic}</TableCell>
                     <TableCell>{data.sensor}</TableCell>
                     <TableCell>{data.value}</TableCell>
                     <TableCell>
