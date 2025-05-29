@@ -1,3 +1,9 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
 # PRD Consideration Rule
 
 When working on any task or feature, always refer to the Product Requirements Document (PRD) located at `docs/prd.md`. This document contains all the essential information about the project, including:
