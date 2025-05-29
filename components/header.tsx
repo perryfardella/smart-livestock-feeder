@@ -51,6 +51,12 @@ export function Header() {
                 >
                   IoT Data
                 </Link>
+                <Link
+                  href="/mqtt-sender"
+                  className="text-sm font-medium hover:underline"
+                >
+                  MQTT Sender
+                </Link>
                 <LogoutButton />
               </div>
             ) : (
