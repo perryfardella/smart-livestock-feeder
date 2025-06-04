@@ -6,7 +6,13 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "infra:install": "cd infrastructure && pnpm install",
+    "infra:synth": "cd infrastructure && pnpm run synth",
+    "infra:deploy": "cd infrastructure && pnpm run deploy",
+    "infra:destroy": "cd infrastructure && pnpm run destroy",
+    "infra:bootstrap": "cd infrastructure && pnpm run bootstrap",
+    "infra:diff": "cd infrastructure && pnpm run diff"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity": "^3.817.0",
