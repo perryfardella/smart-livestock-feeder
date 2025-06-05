@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { format } from "date-fns";
 import {
   Table,
   TableBody,
@@ -75,7 +76,7 @@ export function IoTDataClient({ initialData }: IoTDataClientProps) {
                     {data.sensor_value.toLocaleString()}
                   </TableCell>
                   <TableCell>
-                    {new Date(data.timestamp).toLocaleString()}
+                    {format(new Date(data.timestamp), "dd/MM/yyyy HH:mm:ss")}
                   </TableCell>
                 </TableRow>
               ))}
