@@ -1,7 +1,8 @@
 export type SensorData = {
   id: number;
-  topic: string;
-  sensor: string;
-  value: number;
+  device_id: string;
+  sensor_type: string;
+  sensor_value: number;
   timestamp: string;
+  created_at: string;
 };

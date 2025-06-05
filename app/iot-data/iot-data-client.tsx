@@ -47,30 +47,41 @@ export function IoTDataClient({ initialData }: IoTDataClientProps) {
     <Card>
       <CardHeader>
         <CardTitle>IoT Sensor Data</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Real-time sensor readings from connected devices
+        </p>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Topic</TableHead>
-              <TableHead>Sensor</TableHead>
-              <TableHead>Value</TableHead>
-              <TableHead>Timestamp</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sensorData.map((data) => (
-              <TableRow key={data.id}>
-                <TableCell>{data.topic}</TableCell>
-                <TableCell>{data.sensor}</TableCell>
-                <TableCell>{data.value}</TableCell>
-                <TableCell>
-                  {new Date(data.timestamp).toLocaleString()}
-                </TableCell>
+        {sensorData.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No sensor data available yet
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Device ID</TableHead>
+                <TableHead>Sensor Type</TableHead>
+                <TableHead className="text-right">Value</TableHead>
+                <TableHead>Timestamp</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {sensorData.map((data) => (
+                <TableRow key={data.id}>
+                  <TableCell className="font-mono">{data.device_id}</TableCell>
+                  <TableCell>{data.sensor_type}</TableCell>
+                  <TableCell className="text-right font-mono">
+                    {data.sensor_value.toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    {new Date(data.timestamp).toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );
