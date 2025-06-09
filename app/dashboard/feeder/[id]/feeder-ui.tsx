@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { FeederForm } from "./feeder-form";
 import { DeleteFeeder } from "./delete-feeder";
 import { type Feeder, toggleFeederActive } from "@/lib/actions/feeders";
+import { SensorDashboard } from "@/components/sensor-dashboard";
 import { useState, useTransition } from "react";
 
 export function FeederUI({ feeder }: { feeder: Feeder }) {
@@ -277,6 +278,14 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
               )}
             </div>
           </Card>
+        </div>
+
+        {/* Sensor Data Section */}
+        <div className="mt-8">
+          <SensorDashboard
+            deviceId={feeder.device_id}
+            feederName={feeder.name}
+          />
         </div>
       </div>
     </div>
