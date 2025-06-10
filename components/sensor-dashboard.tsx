@@ -10,6 +10,7 @@ import {
   getSensorDataSummary,
   type SensorDataSummary,
 } from "@/lib/actions/sensor-data";
+import { format } from "date-fns";
 
 interface SensorDashboardProps {
   deviceId: string;
@@ -246,11 +247,14 @@ export function SensorDashboard({
                   </span>
                 </div>
                 <p className="text-lg font-bold">
-                  {sensor.latest_value.toLocaleString()}
+                  {sensor.latest_value.toFixed(2).replace(/\.?0+$/, "")}
                   {getSensorUnit(sensor.sensor_type)}
                 </p>
                 <p className="text-xs text-gray-600">
-                  {new Date(sensor.latest_timestamp).toLocaleString()}
+                  {format(
+                    new Date(sensor.latest_timestamp),
+                    "MMM d, yyyy h:mm a"
+                  )}
                 </p>
               </div>
             ))}

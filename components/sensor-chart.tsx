@@ -97,7 +97,7 @@ export function SensorChart({
         <CardTitle className="text-lg flex items-center justify-between">
           <span>{title || formatSensorType(sensorType)}</span>
           <span className="text-2xl font-bold" style={{ color }}>
-            {latestValue?.toLocaleString()}
+            {latestValue?.toFixed(2).replace(/\.?0+$/, "")}
             {unit ? ` ${unit}` : ""}
           </span>
         </CardTitle>

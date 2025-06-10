@@ -4,7 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Clock, ArrowRight, Settings } from "lucide-react";
 import Link from "next/link";
 import { FeederForm } from "./feeder/[id]/feeder-form";
-import { getUserFeeders } from "@/lib/actions/feeders";
+import { getUserFeedersWithStatus } from "@/lib/actions/feeders";
+import { ConnectionStatus } from "@/components/ui/connection-status";
+import { format } from "date-fns";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -14,8 +16,8 @@ export default async function DashboardPage() {
     redirect("/auth/login");
   }
 
-  // Fetch user's feeders from the database
-  const feeders = await getUserFeeders();
+  // Fetch user's feeders with status from the database
+  const feeders = await getUserFeedersWithStatus();
 
   return (
     <>
@@ -57,15 +59,7 @@ export default async function DashboardPage() {
                         {feeder.location || "No location set"}
                       </p>
                     </div>
-                    <div
-                      className={`rounded-full px-3 py-1 text-sm ${
-                        feeder.is_active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {feeder.is_active ? "Active" : "Inactive"}
-                    </div>
+                    <ConnectionStatus status={feeder.status.status} size="sm" />
                   </div>
 
                   <div className="space-y-4">
@@ -85,9 +79,26 @@ export default async function DashboardPage() {
                         <span className="text-sm text-gray-600">Added</span>
                       </div>
                       <span className="text-sm font-medium">
-                        {new Date(feeder.created_at).toLocaleDateString()}
+                        {format(new Date(feeder.created_at), "MMM d, yyyy")}
                       </span>
                     </div>
+
+                    {feeder.status.lastCommunication && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-5 w-5 text-orange-500" />
+                          <span className="text-sm text-gray-600">
+                            Last Comm
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium">
+                          {format(
+                            new Date(feeder.status.lastCommunication),
+                            "MMM d, yyyy"
+                          )}
+                        </span>
+                      </div>
+                    )}
 
                     {feeder.description && (
                       <div className="text-sm text-gray-600">

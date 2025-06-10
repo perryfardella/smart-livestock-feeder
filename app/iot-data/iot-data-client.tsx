@@ -73,7 +73,7 @@ export function IoTDataClient({ initialData }: IoTDataClientProps) {
                   <TableCell className="font-mono">{data.device_id}</TableCell>
                   <TableCell>{data.sensor_type}</TableCell>
                   <TableCell className="text-right font-mono">
-                    {data.sensor_value.toLocaleString()}
+                    {data.sensor_value.toFixed(2).replace(/\.?0+$/, "")}
                   </TableCell>
                   <TableCell>
                     {format(new Date(data.timestamp), "dd/MM/yyyy HH:mm:ss")}

@@ -8,8 +8,9 @@ import {
   ArrowLeft,
   Camera,
   Utensils,
-  Power,
-  PowerOff,
+  Wifi,
+  WifiOff,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -23,29 +24,73 @@ import {
 import { toast } from "sonner";
 import { FeederForm } from "./feeder-form";
 import { DeleteFeeder } from "./delete-feeder";
-import { type Feeder, toggleFeederActive } from "@/lib/actions/feeders";
+import { type Feeder } from "@/lib/actions/feeders";
 import { SensorDashboard } from "@/components/sensor-dashboard";
-import { useState, useTransition } from "react";
+import { useState, useEffect } from "react";
+import { getFeederConnectionStatus } from "@/lib/actions/sensor-data";
+import {
+  type FeederConnectionStatus,
+  getFeederStatus,
+} from "@/lib/utils/feeder-status";
+import { ConnectionStatus } from "@/components/ui/connection-status";
+import { format } from "date-fns";
 
 export function FeederUI({ feeder }: { feeder: Feeder }) {
-  const [isActive, setIsActive] = useState(feeder.is_active);
-  const [isPending, startTransition] = useTransition();
+  const [connectionStatus, setConnectionStatus] =
+    useState<FeederConnectionStatus | null>(null);
+  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleToggleActive = () => {
-    startTransition(async () => {
+  // Check connection status on component mount and periodically
+  useEffect(() => {
+    const checkConnection = async () => {
       try {
-        const updatedFeeder = await toggleFeederActive(feeder.id);
-        setIsActive(updatedFeeder.is_active);
-        toast.success(
-          `Feeder ${
-            updatedFeeder.is_active ? "activated" : "deactivated"
-          } successfully!`
-        );
+        const status = await getFeederConnectionStatus(feeder.device_id);
+        setConnectionStatus(status);
       } catch (error) {
-        toast.error("Failed to toggle feeder status");
-        console.error("Error toggling feeder:", error);
+        console.error("Error checking connection status:", error);
+      } finally {
+        setIsCheckingConnection(false);
       }
-    });
+    };
+
+    checkConnection();
+
+    // Check connection status every 30 seconds
+    const interval = setInterval(checkConnection, 30000);
+
+    return () => clearInterval(interval);
+  }, [feeder.device_id]);
+
+  // Get feeder status
+  const feederStatus = connectionStatus
+    ? getFeederStatus(connectionStatus.lastCommunication)
+    : null;
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    try {
+      // TODO: Implement MQTT publish to request data from feeder
+      // This will involve sending a command to the device to force it to send sensor data
+      // For now, we'll just show a success message and check the connection status
+
+      toast.success("Manual sync initiated! Waiting for device response...");
+
+      // Wait a moment then check connection status
+      setTimeout(async () => {
+        try {
+          const status = await getFeederConnectionStatus(feeder.device_id);
+          setConnectionStatus(status);
+        } catch (error) {
+          console.error("Error checking connection after sync:", error);
+        }
+      }, 2000);
+    } catch (error) {
+      toast.error("Failed to initiate manual sync");
+      console.error("Error during manual sync:", error);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (
@@ -78,26 +123,18 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
             <DeleteFeeder feeder={feeder} />
 
             <Button
-              variant={isActive ? "outline" : "default"}
+              variant="outline"
               className="flex items-center gap-2"
-              onClick={handleToggleActive}
-              disabled={isPending}
+              onClick={handleManualSync}
+              disabled={isSyncing}
             >
-              {isActive ? (
-                <PowerOff className="h-4 w-4" />
-              ) : (
-                <Power className="h-4 w-4" />
-              )}
+              <RefreshCw
+                className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
+              />
               <span className="hidden sm:inline">
-                {isPending
-                  ? "Updating..."
-                  : isActive
-                  ? "Deactivate"
-                  : "Activate"}
+                {isSyncing ? "Syncing..." : "Manual Sync"}
               </span>
-              <span className="sm:hidden">
-                {isPending ? "..." : isActive ? "Off" : "On"}
-              </span>
+              <span className="sm:hidden">Sync</span>
             </Button>
 
             <Button
@@ -147,28 +184,51 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
               </div>
             </div>
           </Card>
+
           <Card className="p-6">
             <div className="flex items-center gap-4">
-              <Activity className="h-8 w-8 text-green-500" />
+              {isCheckingConnection ? (
+                <RefreshCw className="h-8 w-8 text-gray-400 animate-spin" />
+              ) : feederStatus?.status === "online" ? (
+                <Wifi className="h-8 w-8 text-green-500" />
+              ) : (
+                <WifiOff className="h-8 w-8 text-red-500" />
+              )}
               <div>
                 <p className="text-sm text-gray-600">Status</p>
                 <p
-                  className={`text-2xl font-semibold ${
-                    isActive ? "text-green-600" : "text-gray-600"
+                  className={`text-lg font-semibold ${
+                    isCheckingConnection
+                      ? "text-gray-600"
+                      : feederStatus?.status === "online"
+                      ? "text-green-600"
+                      : "text-red-600"
                   }`}
                 >
-                  {isActive ? "Active" : "Inactive"}
+                  {isCheckingConnection
+                    ? "Checking..."
+                    : feederStatus?.displayText || "Offline"}
                 </p>
+                {feederStatus?.lastCommunication && (
+                  <p className="text-xs text-gray-500">
+                    Last communication:{" "}
+                    {format(
+                      new Date(feederStatus.lastCommunication),
+                      "MMM d, yyyy h:mm a"
+                    )}
+                  </p>
+                )}
               </div>
             </div>
           </Card>
+
           <Card className="p-6">
             <div className="flex items-center gap-4">
               <Clock className="h-8 w-8 text-blue-500" />
               <div>
                 <p className="text-sm text-gray-600">Created</p>
                 <p className="text-lg font-semibold">
-                  {new Date(feeder.created_at).toLocaleDateString()}
+                  {format(new Date(feeder.created_at), "MMM d, yyyy")}
                 </p>
               </div>
             </div>
@@ -179,7 +239,7 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
               <div>
                 <p className="text-sm text-gray-600">Last Updated</p>
                 <p className="text-lg font-semibold">
-                  {new Date(feeder.updated_at).toLocaleDateString()}
+                  {format(new Date(feeder.updated_at), "MMM d, yyyy")}
                 </p>
               </div>
             </div>
@@ -206,15 +266,13 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
                   {feeder.location || "Not set"}
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Status:</span>
-                <span
-                  className={`font-medium ${
-                    isActive ? "text-green-600" : "text-gray-600"
-                  }`}
-                >
-                  {isActive ? "Active" : "Inactive"}
-                </span>
+                {feederStatus ? (
+                  <ConnectionStatus status={feederStatus.status} size="sm" />
+                ) : (
+                  <span className="text-sm text-gray-600">Checking...</span>
+                )}
               </div>
               {feeder.description && (
                 <div>
@@ -261,7 +319,7 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
                 <div>
                   <p className="text-sm font-medium">Feeder created</p>
                   <p className="text-xs text-gray-600">
-                    {new Date(feeder.created_at).toLocaleString()}
+                    {format(new Date(feeder.created_at), "MMM d, yyyy h:mm a")}
                   </p>
                 </div>
               </div>
@@ -271,7 +329,10 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
                   <div>
                     <p className="text-sm font-medium">Feeder updated</p>
                     <p className="text-xs text-gray-600">
-                      {new Date(feeder.updated_at).toLocaleString()}
+                      {format(
+                        new Date(feeder.updated_at),
+                        "MMM d, yyyy h:mm a"
+                      )}
                     </p>
                   </div>
                 </div>

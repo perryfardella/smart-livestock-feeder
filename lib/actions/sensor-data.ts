@@ -1,6 +1,10 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  isFeederOnline,
+  type FeederConnectionStatus,
+} from "@/lib/utils/feeder-status";
 
 export interface SensorReading {
   id: number;
@@ -182,4 +186,36 @@ export async function getSensorDataForChart(
     timestamp: item.timestamp,
     value: item.sensor_value,
   }));
+}
+
+export async function getLastCommunicationTime(
+  deviceId: string
+): Promise<string | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("sensor_data")
+    .select("timestamp")
+    .eq("device_id", deviceId)
+    .order("timestamp", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data.timestamp;
+}
+
+export async function getFeederConnectionStatus(
+  deviceId: string
+): Promise<FeederConnectionStatus> {
+  const lastCommunication = await getLastCommunicationTime(deviceId);
+  const isOnline = isFeederOnline(lastCommunication);
+
+  return {
+    isOnline,
+    lastCommunication,
+  };
 }
