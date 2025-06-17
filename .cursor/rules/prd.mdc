@@ -1,6 +1,6 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: true
 ---
 
@@ -19,7 +19,7 @@ When working on any task or feature, always refer to the Product Requirements Do
 ## Implementation Guidelines
 
 1. Always check if a feature is within scope of the MVP
-2. Ensure all UI components use Shadcn UI for consistency
+2. Ensure all UI components use Shadcn UI for consistency (use shadcn@latest package when adding new components)
 3. Follow the technical stack specifications
 4. Consider mobile responsiveness in all implementations
 5. Maintain security best practices, especially for authentication and payments
@@ -42,7 +42,7 @@ This rule serves as a reminder to always consult the PRD. For the most up-to-dat
 
    - Frontend: Next.js, React, TypeScript, Tailwind CSS, Shadcn UI
    - Backend: Supabase (PostgreSQL database, Authentication)
-   - Package Manager: pnpm
+   - Package Manager: pnpm *important* use pnpm / pnpm dlx for all shell commands, not npm
    - Hosting: Vercel
    - Payments: Stripe
    - Analytics: Vercel Analytics

@@ -34,6 +34,7 @@ import {
 } from "@/lib/utils/feeder-status";
 import { ConnectionStatus } from "@/components/ui/connection-status";
 import { format } from "date-fns";
+import { FeedingScheduleSection } from "./feeding-schedule";
 
 export function FeederUI({ feeder }: { feeder: Feeder }) {
   const [connectionStatus, setConnectionStatus] =
@@ -309,6 +310,11 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
               )}
             </div>
           </Card>
+
+          {/* Feeding Schedule */}
+          <div className="lg:col-span-2">
+            <FeedingScheduleSection />
+          </div>
 
           {/* Activity Log */}
           <Card className="p-6 lg:col-span-2">
