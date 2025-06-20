@@ -36,7 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -299,14 +299,6 @@ function FeedingScheduleForm({
   const [selectedDays, setSelectedDays] = useState<number[]>(
     schedule?.daysOfWeek || []
   );
-  const [startNow, setStartNow] = useState(false);
-
-  const handleStartNowChange = (checked: boolean) => {
-    setStartNow(checked);
-    if (checked) {
-      setStartDate(new Date());
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -343,29 +335,13 @@ function FeedingScheduleForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Start Date & Time</Label>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="startNow"
-              checked={startNow}
-              onCheckedChange={handleStartNowChange}
-            />
-            <Label
-              htmlFor="startNow"
-              className="text-sm font-normal cursor-pointer"
-            >
-              Start now
-            </Label>
-          </div>
-        </div>
+        <Label>Start Date & Time</Label>
         <div className="flex gap-2">
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 className="w-[240px] justify-start text-left font-normal"
-                disabled={startNow}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {startDate ? format(startDate, "PPP") : "Pick a date"}
@@ -392,32 +368,46 @@ function FeedingScheduleForm({
               }
             }}
             className="w-[120px]"
-            disabled={startNow}
           />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label>End Date (Optional)</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-[240px] justify-start text-left font-normal"
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {endDate ? format(endDate, "PPP") : "Pick a date"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={endDate}
-              onSelect={setEndDate}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
+        <Label>End Date & Time (Optional)</Label>
+        <div className="flex gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-[240px] justify-start text-left font-normal"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {endDate ? format(endDate, "PPP") : "Pick a date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={endDate}
+                onSelect={setEndDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          <Input
+            type="time"
+            value={endDate ? format(endDate, "HH:mm") : ""}
+            onChange={(e) => {
+              if (endDate) {
+                const [hours, minutes] = e.target.value.split(":");
+                const newDate = new Date(endDate);
+                newDate.setHours(parseInt(hours), parseInt(minutes));
+                setEndDate(newDate);
+              }
+            }}
+            className="w-[120px]"
+          />
+        </div>
       </div>
 
       <div className="space-y-2">
