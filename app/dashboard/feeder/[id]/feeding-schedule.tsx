@@ -44,7 +44,7 @@ export type FeedingSchedule = {
   id: string;
   startDate: Date;
   endDate?: Date;
-  interval: "one-off" | "weekly" | "biweekly" | "four-weekly";
+  interval: "one-off" | "daily" | "weekly" | "biweekly" | "four-weekly";
   feedAmount: number;
   daysOfWeek: number[]; // 0-6 for Sunday-Saturday
 };
@@ -104,7 +104,9 @@ export function FeedingScheduleSection() {
     // Calculate next feeding based on interval
     let nextDate = new Date(schedule.startDate);
     while (isBefore(nextDate, now)) {
-      if (schedule.interval === "weekly") {
+      if (schedule.interval === "daily") {
+        nextDate = addDays(nextDate, 1);
+      } else if (schedule.interval === "weekly") {
         nextDate = addDays(nextDate, 7);
       } else if (schedule.interval === "biweekly") {
         nextDate = addWeeks(nextDate, 2);
@@ -194,6 +196,8 @@ export function FeedingScheduleSection() {
                         <div className="font-medium">
                           {schedule.interval === "one-off" ? (
                             "One-off Feed"
+                          ) : schedule.interval === "daily" ? (
+                            "Every Day"
                           ) : (
                             <>
                               Every{" "}
@@ -291,7 +295,7 @@ function FeedingScheduleForm({
   );
   const [endDate, setEndDate] = useState<Date | undefined>(schedule?.endDate);
   const [interval, setInterval] = useState<
-    "one-off" | "weekly" | "biweekly" | "four-weekly"
+    "one-off" | "daily" | "weekly" | "biweekly" | "four-weekly"
   >(schedule?.interval || "weekly");
   const [feedAmount, setFeedAmount] = useState(
     schedule?.feedAmount?.toString() || "1"
@@ -306,7 +310,11 @@ function FeedingScheduleForm({
       toast.error("Please select a start date");
       return;
     }
-    if (interval !== "one-off" && selectedDays.length === 0) {
+    if (
+      interval !== "one-off" &&
+      interval !== "daily" &&
+      selectedDays.length === 0
+    ) {
       toast.error("Please select at least one day of the week");
       return;
     }
@@ -415,7 +423,7 @@ function FeedingScheduleForm({
         <Select
           value={interval}
           onValueChange={(
-            value: "one-off" | "weekly" | "biweekly" | "four-weekly"
+            value: "one-off" | "daily" | "weekly" | "biweekly" | "four-weekly"
           ) => setInterval(value)}
         >
           <SelectTrigger>
@@ -423,6 +431,7 @@ function FeedingScheduleForm({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="one-off">One-off Feed</SelectItem>
+            <SelectItem value="daily">Every Day</SelectItem>
             <SelectItem value="weekly">Every Week</SelectItem>
             <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
             <SelectItem value="four-weekly">Every 4 Weeks</SelectItem>
@@ -442,7 +451,7 @@ function FeedingScheduleForm({
         />
       </div>
 
-      {interval !== "one-off" && (
+      {interval !== "one-off" && interval !== "daily" && (
         <div className="space-y-2">
           <Label>Days of Week</Label>
           <div className="grid grid-cols-4 gap-2">
