@@ -19,8 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, addDays, addWeeks, isBefore, isAfter } from "date-fns";
-import { Plus, Pencil, Trash2, Calendar as CalendarIcon } from "lucide-react";
+import { format, addDays, isBefore, isAfter } from "date-fns";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Calendar as CalendarIcon,
+  Clock,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -40,13 +46,19 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+export type FeedingSession = {
+  id: string;
+  time: string; // HH:mm format
+  feedAmount: number;
+};
+
 export type FeedingSchedule = {
   id: string;
   startDate: Date;
   endDate?: Date;
   interval: "one-off" | "daily" | "weekly" | "biweekly" | "four-weekly";
-  feedAmount: number;
   daysOfWeek: number[]; // 0-6 for Sunday-Saturday
+  sessions: FeedingSession[]; // Multiple sessions per day
 };
 
 export function FeedingScheduleSection() {
@@ -83,12 +95,27 @@ export function FeedingScheduleSection() {
     toast.success("Feeding schedule deleted successfully");
   };
 
-  const getNextFeeding = (schedule: FeedingSchedule): Date | null => {
+  const getNextFeeding = (
+    schedule: FeedingSchedule
+  ): { date: Date; session: FeedingSession } | null => {
     const now = new Date();
 
     // For one-off feeds, return null if the feed has already occurred
     if (schedule.interval === "one-off") {
-      return isBefore(schedule.startDate, now) ? null : schedule.startDate;
+      if (isBefore(schedule.startDate, now)) return null;
+
+      // Find the next session for the one-off date
+      const nextSession = schedule.sessions
+        .map((session) => {
+          const sessionDate = new Date(schedule.startDate);
+          const [hours, minutes] = session.time.split(":");
+          sessionDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+          return { date: sessionDate, session };
+        })
+        .filter(({ date }) => isAfter(date, now))
+        .sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+
+      return nextSession || null;
     }
 
     // For recurring feeds, return null if we're past the end date
@@ -96,25 +123,63 @@ export function FeedingScheduleSection() {
       return null;
     }
 
-    // If we haven't started yet, return the start date
+    // Calculate next feeding based on interval
+    let checkDate = new Date(schedule.startDate);
+
+    // If we haven't started yet, check from start date
     if (isBefore(now, schedule.startDate)) {
-      return schedule.startDate;
+      checkDate = new Date(schedule.startDate);
+    } else {
+      // Start checking from today
+      checkDate = new Date(now);
+      checkDate.setHours(0, 0, 0, 0);
     }
 
-    // Calculate next feeding based on interval
-    let nextDate = new Date(schedule.startDate);
-    while (isBefore(nextDate, now)) {
-      if (schedule.interval === "daily") {
-        nextDate = addDays(nextDate, 1);
-      } else if (schedule.interval === "weekly") {
-        nextDate = addDays(nextDate, 7);
-      } else if (schedule.interval === "biweekly") {
-        nextDate = addWeeks(nextDate, 2);
-      } else if (schedule.interval === "four-weekly") {
-        nextDate = addWeeks(nextDate, 4);
+    // Look ahead for the next 365 days to find the next feeding
+    for (let i = 0; i < 365; i++) {
+      const dayOfWeek = checkDate.getDay();
+
+      // Check if this day matches our schedule
+      const matchesSchedule =
+        schedule.interval === "daily" ||
+        (schedule.daysOfWeek.includes(dayOfWeek) &&
+          (schedule.interval === "weekly" ||
+            (schedule.interval === "biweekly" &&
+              Math.floor(
+                (checkDate.getTime() - schedule.startDate.getTime()) /
+                  (1000 * 60 * 60 * 24 * 7)
+              ) %
+                2 ===
+                0) ||
+            (schedule.interval === "four-weekly" &&
+              Math.floor(
+                (checkDate.getTime() - schedule.startDate.getTime()) /
+                  (1000 * 60 * 60 * 24 * 7)
+              ) %
+                4 ===
+                0)));
+
+      if (matchesSchedule && !isBefore(checkDate, schedule.startDate)) {
+        // Find the next session for this day
+        const nextSession = schedule.sessions
+          .map((session) => {
+            const sessionDate = new Date(checkDate);
+            const [hours, minutes] = session.time.split(":");
+            sessionDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            return { date: sessionDate, session };
+          })
+          .filter(({ date }) => isAfter(date, now))
+          .sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+
+        if (nextSession) {
+          return nextSession;
+        }
       }
+
+      checkDate = addDays(checkDate, 1);
     }
-    return nextDate;
+
+    return null;
   };
 
   const isScheduleActive = (schedule: FeedingSchedule) => {
@@ -129,6 +194,13 @@ export function FeedingScheduleSection() {
       return !schedule.endDate;
     }
     return false;
+  };
+
+  const getTotalDailyAmount = (schedule: FeedingSchedule) => {
+    return schedule.sessions.reduce(
+      (total, session) => total + session.feedAmount,
+      0
+    );
   };
 
   return (
@@ -181,7 +253,6 @@ export function FeedingScheduleSection() {
             </TableHeader>
             <TableBody>
               {schedules.map((schedule) => {
-                const nextFeeding = getNextFeeding(schedule);
                 const isActive = isScheduleActive(schedule);
                 return (
                   <TableRow
@@ -216,10 +287,12 @@ export function FeedingScheduleSection() {
                           )}
                         </div>
                         <div className="text-sm text-gray-500">
+                          {schedule.sessions.length} session
+                          {schedule.sessions.length !== 1 ? "s" : ""} •{" "}
                           {isBefore(schedule.startDate, new Date())
                             ? "Started"
                             : "Starting"}{" "}
-                          {format(schedule.startDate, "MMM d, yyyy h:mm a")}
+                          {format(schedule.startDate, "MMM d, yyyy")}
                           {schedule.endDate && (
                             <>
                               {" "}
@@ -227,17 +300,33 @@ export function FeedingScheduleSection() {
                             </>
                           )}
                         </div>
+                        <div className="text-xs text-gray-400">
+                          Sessions:{" "}
+                          {schedule.sessions
+                            .map((s) => `${s.time} (${s.feedAmount}kg)`)
+                            .join(", ")}
+                        </div>
                       </div>
                     </TableCell>
-                    <TableCell>{schedule.feedAmount}kg</TableCell>
+                    <TableCell>{getTotalDailyAmount(schedule)}kg/day</TableCell>
                     <TableCell>
-                      {nextFeeding ? (
-                        format(nextFeeding, "MMM d, yyyy h:mm a")
-                      ) : (
-                        <span className="text-gray-500">
-                          No upcoming feedings
-                        </span>
-                      )}
+                      {(() => {
+                        const nextFeeding = getNextFeeding(schedule);
+                        return nextFeeding ? (
+                          <div>
+                            <div>
+                              {format(nextFeeding.date, "MMM d, yyyy h:mm a")}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {nextFeeding.session.feedAmount}kg
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500">
+                            No upcoming feedings
+                          </span>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -297,11 +386,11 @@ function FeedingScheduleForm({
   const [interval, setInterval] = useState<
     "one-off" | "daily" | "weekly" | "biweekly" | "four-weekly"
   >(schedule?.interval || "weekly");
-  const [feedAmount, setFeedAmount] = useState(
-    schedule?.feedAmount?.toString() || "1"
-  );
   const [selectedDays, setSelectedDays] = useState<number[]>(
     schedule?.daysOfWeek || []
+  );
+  const [sessions, setSessions] = useState<FeedingSession[]>(
+    schedule?.sessions || [{ id: "1", time: "08:00", feedAmount: 1 }]
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -318,8 +407,12 @@ function FeedingScheduleForm({
       toast.error("Please select at least one day of the week");
       return;
     }
-    if (parseFloat(feedAmount) <= 0) {
-      toast.error("Feed amount must be greater than 0");
+    if (sessions.length === 0) {
+      toast.error("Please add at least one feeding session");
+      return;
+    }
+    if (sessions.some((session) => session.feedAmount <= 0)) {
+      toast.error("All feed amounts must be greater than 0");
       return;
     }
 
@@ -327,8 +420,8 @@ function FeedingScheduleForm({
       startDate,
       endDate,
       interval,
-      feedAmount: parseFloat(feedAmount),
       daysOfWeek: selectedDays,
+      sessions,
     });
   };
 
@@ -337,6 +430,33 @@ function FeedingScheduleForm({
       current.includes(day)
         ? current.filter((d) => d !== day)
         : [...current, day]
+    );
+  };
+
+  const addSession = () => {
+    const newSession: FeedingSession = {
+      id: Math.random().toString(36).substr(2, 9),
+      time: "08:00",
+      feedAmount: 1,
+    };
+    setSessions([...sessions, newSession]);
+  };
+
+  const removeSession = (sessionId: string) => {
+    if (sessions.length > 1) {
+      setSessions(sessions.filter((s) => s.id !== sessionId));
+    }
+  };
+
+  const updateSession = (
+    sessionId: string,
+    field: keyof FeedingSession,
+    value: string | number
+  ) => {
+    setSessions(
+      sessions.map((session) =>
+        session.id === sessionId ? { ...session, [field]: value } : session
+      )
     );
   };
 
@@ -366,11 +486,16 @@ function FeedingScheduleForm({
           </Popover>
           <Input
             type="time"
-            value={startDate ? format(startDate, "HH:mm") : ""}
+            value={startDate ? format(startDate, "HH:mm") : "08:00"}
             onChange={(e) => {
               if (startDate) {
                 const [hours, minutes] = e.target.value.split(":");
                 const newDate = new Date(startDate);
+                newDate.setHours(parseInt(hours), parseInt(minutes));
+                setStartDate(newDate);
+              } else {
+                const newDate = new Date();
+                const [hours, minutes] = e.target.value.split(":");
                 newDate.setHours(parseInt(hours), parseInt(minutes));
                 setStartDate(newDate);
               }
@@ -414,6 +539,7 @@ function FeedingScheduleForm({
               }
             }}
             className="w-[120px]"
+            placeholder="--:--"
           />
         </div>
       </div>
@@ -439,18 +565,6 @@ function FeedingScheduleForm({
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="feedAmount">Feed Amount (kg)</Label>
-        <Input
-          id="feedAmount"
-          type="number"
-          step="0.1"
-          min="0.1"
-          value={feedAmount}
-          onChange={(e) => setFeedAmount(e.target.value)}
-        />
-      </div>
-
       {interval !== "one-off" && interval !== "daily" && (
         <div className="space-y-2">
           <Label>Days of Week</Label>
@@ -469,6 +583,78 @@ function FeedingScheduleForm({
           </div>
         </div>
       )}
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>Feeding Sessions</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addSession}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add Session
+          </Button>
+        </div>
+        <div className="space-y-3">
+          {sessions.map((session) => (
+            <div
+              key={session.id}
+              className="flex items-center gap-2 p-3 border rounded-lg"
+            >
+              <div className="flex items-start gap-2 flex-1">
+                <Clock className="h-4 w-4 text-gray-500 mt-6" />
+                <div className="space-y-1">
+                  <Label className="text-xs">Time</Label>
+                  <Input
+                    type="time"
+                    value={session.time}
+                    onChange={(e) =>
+                      updateSession(session.id, "time", e.target.value)
+                    }
+                    className="w-[120px]"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Amount (kg)</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    value={session.feedAmount}
+                    onChange={(e) =>
+                      updateSession(
+                        session.id,
+                        "feedAmount",
+                        parseFloat(e.target.value)
+                      )
+                    }
+                    className="w-[100px]"
+                  />
+                </div>
+              </div>
+              {sessions.length > 1 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeSession(session.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="text-sm text-gray-500">
+          Total daily amount:{" "}
+          {sessions
+            .reduce((total, session) => total + session.feedAmount, 0)
+            .toFixed(1)}
+          kg
+        </div>
+      </div>
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>
