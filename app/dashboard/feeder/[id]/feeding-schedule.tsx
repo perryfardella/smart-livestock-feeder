@@ -56,7 +56,7 @@ export type FeedingSchedule = {
   id: string;
   startDate: Date;
   endDate?: Date;
-  interval: "one-off" | "daily" | "weekly" | "biweekly" | "four-weekly";
+  interval: "daily" | "weekly" | "biweekly" | "four-weekly";
   daysOfWeek: number[]; // 0-6 for Sunday-Saturday
   sessions: FeedingSession[]; // Multiple sessions per day
 };
@@ -99,24 +99,6 @@ export function FeedingScheduleSection() {
     schedule: FeedingSchedule
   ): { date: Date; session: FeedingSession } | null => {
     const now = new Date();
-
-    // For one-off feeds, return null if the feed has already occurred
-    if (schedule.interval === "one-off") {
-      if (isBefore(schedule.startDate, now)) return null;
-
-      // Find the next session for the one-off date
-      const nextSession = schedule.sessions
-        .map((session) => {
-          const sessionDate = new Date(schedule.startDate);
-          const [hours, minutes] = session.time.split(":");
-          sessionDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-          return { date: sessionDate, session };
-        })
-        .filter(({ date }) => isAfter(date, now))
-        .sort((a, b) => a.date.getTime() - b.date.getTime())[0];
-
-      return nextSession || null;
-    }
 
     // For recurring feeds, return null if we're past the end date
     if (schedule.endDate && isBefore(schedule.endDate, now)) {
@@ -184,9 +166,6 @@ export function FeedingScheduleSection() {
 
   const isScheduleActive = (schedule: FeedingSchedule) => {
     const now = new Date();
-    if (schedule.interval === "one-off") {
-      return !isBefore(schedule.startDate, now);
-    }
     if (isBefore(schedule.startDate, now)) {
       if (schedule.endDate && isAfter(schedule.endDate, now)) {
         return true;
@@ -265,9 +244,7 @@ export function FeedingScheduleSection() {
                     <TableCell>
                       <div className="space-y-1">
                         <div className="font-medium">
-                          {schedule.interval === "one-off" ? (
-                            "One-off Feed"
-                          ) : schedule.interval === "daily" ? (
+                          {schedule.interval === "daily" ? (
                             "Every Day"
                           ) : (
                             <>
@@ -384,8 +361,8 @@ function FeedingScheduleForm({
   );
   const [endDate, setEndDate] = useState<Date | undefined>(schedule?.endDate);
   const [interval, setInterval] = useState<
-    "one-off" | "daily" | "weekly" | "biweekly" | "four-weekly"
-  >(schedule?.interval || "weekly");
+    "daily" | "weekly" | "biweekly" | "four-weekly"
+  >(schedule?.interval || "daily");
   const [selectedDays, setSelectedDays] = useState<number[]>(
     schedule?.daysOfWeek || []
   );
@@ -399,11 +376,7 @@ function FeedingScheduleForm({
       toast.error("Please select a start date");
       return;
     }
-    if (
-      interval !== "one-off" &&
-      interval !== "daily" &&
-      selectedDays.length === 0
-    ) {
+    if (interval !== "daily" && selectedDays.length === 0) {
       toast.error("Please select at least one day of the week");
       return;
     }
@@ -549,14 +522,13 @@ function FeedingScheduleForm({
         <Select
           value={interval}
           onValueChange={(
-            value: "one-off" | "daily" | "weekly" | "biweekly" | "four-weekly"
+            value: "daily" | "weekly" | "biweekly" | "four-weekly"
           ) => setInterval(value)}
         >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="one-off">One-off Feed</SelectItem>
             <SelectItem value="daily">Every Day</SelectItem>
             <SelectItem value="weekly">Every Week</SelectItem>
             <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
@@ -565,7 +537,7 @@ function FeedingScheduleForm({
         </Select>
       </div>
 
-      {interval !== "one-off" && interval !== "daily" && (
+      {interval !== "daily" && (
         <div className="space-y-2">
           <Label>Days of Week</Label>
           <div className="grid grid-cols-4 gap-2">
