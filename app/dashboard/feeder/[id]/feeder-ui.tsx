@@ -313,7 +313,7 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
 
           {/* Feeding Schedule */}
           <div className="lg:col-span-2">
-            <FeedingScheduleSection />
+            <FeedingScheduleSection feederId={feeder.id} />
           </div>
 
           {/* Activity Log */}

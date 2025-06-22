@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import {
   Trash2,
   Calendar as CalendarIcon,
   Clock,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
@@ -45,15 +46,22 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  getFeedingSchedules,
+  createFeedingSchedule,
+  updateFeedingSchedule,
+  deleteFeedingSchedule,
+} from "@/lib/actions/feeding-schedules";
 
 export type FeedingSession = {
-  id: string;
+  id?: string;
   time: string; // HH:mm format
   feedAmount: number;
 };
 
 export type FeedingSchedule = {
-  id: string;
+  id?: string;
+  feederId: string;
   startDate: Date;
   endDate?: Date;
   interval: "daily" | "weekly" | "biweekly" | "four-weekly";
@@ -61,38 +69,98 @@ export type FeedingSchedule = {
   sessions: FeedingSession[]; // Multiple sessions per day
 };
 
-export function FeedingScheduleSection() {
+type FeedingScheduleSectionProps = {
+  feederId: string;
+};
+
+export function FeedingScheduleSection({
+  feederId,
+}: FeedingScheduleSectionProps) {
   const [schedules, setSchedules] = useState<FeedingSchedule[]>([]);
   const [editingSchedule, setEditingSchedule] =
     useState<FeedingSchedule | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleAddSchedule = (schedule: Omit<FeedingSchedule, "id">) => {
-    const newSchedule = {
-      ...schedule,
-      id: Math.random().toString(36).substr(2, 9),
-    };
-    setSchedules([...schedules, newSchedule]);
-    setIsDialogOpen(false);
-    toast.success("Feeding schedule added successfully");
+  // Load schedules on component mount
+  useEffect(() => {
+    loadSchedules();
+  }, [feederId]);
+
+  const loadSchedules = async () => {
+    setIsLoading(true);
+    try {
+      const result = await getFeedingSchedules(feederId);
+      if (result.success) {
+        setSchedules(result.schedules);
+      } else {
+        toast.error(result.error || "Failed to load feeding schedules");
+      }
+    } catch (error) {
+      console.error("Error loading schedules:", error);
+      toast.error("Failed to load feeding schedules");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleEditSchedule = (schedule: Omit<FeedingSchedule, "id">) => {
-    if (!editingSchedule) return;
-    setSchedules(
-      schedules.map((s) =>
-        s.id === editingSchedule.id
-          ? { ...schedule, id: editingSchedule.id }
-          : s
-      )
-    );
-    setIsDialogOpen(false);
-    toast.success("Feeding schedule updated successfully");
+  const handleAddSchedule = async (
+    schedule: Omit<FeedingSchedule, "id" | "feederId">
+  ) => {
+    try {
+      const result = await createFeedingSchedule({
+        ...schedule,
+        feederId,
+      });
+      if (result.success) {
+        await loadSchedules(); // Refresh the list
+        setIsDialogOpen(false);
+        toast.success("Feeding schedule added successfully");
+      } else {
+        toast.error(result.error || "Failed to create feeding schedule");
+      }
+    } catch (error) {
+      console.error("Error creating schedule:", error);
+      toast.error("Failed to create feeding schedule");
+    }
   };
 
-  const handleDeleteSchedule = (id: string) => {
-    setSchedules(schedules.filter((s) => s.id !== id));
-    toast.success("Feeding schedule deleted successfully");
+  const handleEditSchedule = async (
+    schedule: Omit<FeedingSchedule, "id" | "feederId">
+  ) => {
+    if (!editingSchedule?.id) return;
+    try {
+      const result = await updateFeedingSchedule(editingSchedule.id, {
+        ...schedule,
+        feederId,
+      });
+      if (result.success) {
+        await loadSchedules(); // Refresh the list
+        setEditingSchedule(null);
+        setIsDialogOpen(false);
+        toast.success("Feeding schedule updated successfully");
+      } else {
+        toast.error(result.error || "Failed to update feeding schedule");
+      }
+    } catch (error) {
+      console.error("Error updating schedule:", error);
+      toast.error("Failed to update feeding schedule");
+    }
+  };
+
+  const handleDeleteSchedule = async (id: string) => {
+    try {
+      const result = await deleteFeedingSchedule(id, feederId);
+      if (result.success) {
+        await loadSchedules(); // Refresh the list
+        toast.success("Feeding schedule deleted successfully");
+      } else {
+        toast.error(result.error || "Failed to delete feeding schedule");
+      }
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
+      toast.error("Failed to delete feeding schedule");
+    }
   };
 
   const getNextFeeding = (
@@ -215,7 +283,14 @@ export function FeedingScheduleSection() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {schedules.length === 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="ml-2 text-sm text-gray-500">
+              Loading schedules...
+            </span>
+          </div>
+        ) : schedules.length === 0 ? (
           <p className="text-sm text-gray-500">
             No feeding schedules configured
           </p>
@@ -328,7 +403,9 @@ export function FeedingScheduleSection() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDeleteSchedule(schedule.id)}
+                          onClick={() =>
+                            schedule.id && handleDeleteSchedule(schedule.id)
+                          }
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -347,7 +424,7 @@ export function FeedingScheduleSection() {
 
 type FeedingScheduleFormProps = {
   schedule?: FeedingSchedule | null;
-  onSubmit: (schedule: Omit<FeedingSchedule, "id">) => void;
+  onSubmit: (schedule: Omit<FeedingSchedule, "id" | "feederId">) => void;
   onCancel: () => void;
 };
 
@@ -583,6 +660,7 @@ function FeedingScheduleForm({
                     type="time"
                     value={session.time}
                     onChange={(e) =>
+                      session.id &&
                       updateSession(session.id, "time", e.target.value)
                     }
                     className="w-[120px]"
@@ -596,6 +674,7 @@ function FeedingScheduleForm({
                     min="0.1"
                     value={session.feedAmount}
                     onChange={(e) =>
+                      session.id &&
                       updateSession(
                         session.id,
                         "feedAmount",
@@ -611,7 +690,7 @@ function FeedingScheduleForm({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => removeSession(session.id)}
+                  onClick={() => session.id && removeSession(session.id)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
