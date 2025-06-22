@@ -25,7 +25,6 @@ import {
   Pencil,
   Trash2,
   Calendar as CalendarIcon,
-  Clock,
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -262,7 +261,7 @@ export function FeedingScheduleSection({
                 Add Schedule
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingSchedule ? "Edit Schedule" : "Add New Schedule"}
@@ -511,15 +510,15 @@ function FeedingScheduleForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 px-1">
       <div className="space-y-2">
         <Label>Start Date & Time</Label>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="w-[240px] justify-start text-left font-normal"
+                className="w-full sm:w-[240px] justify-start text-left font-normal"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {startDate ? format(startDate, "PPP") : "Pick a date"}
@@ -550,19 +549,19 @@ function FeedingScheduleForm({
                 setStartDate(newDate);
               }
             }}
-            className="w-[120px]"
+            className="w-full sm:w-[120px]"
           />
         </div>
       </div>
 
       <div className="space-y-2">
         <Label>End Date & Time (Optional)</Label>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="w-[240px] justify-start text-left font-normal"
+                className="w-full sm:w-[240px] justify-start text-left font-normal"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {endDate ? format(endDate, "PPP") : "Pick a date"}
@@ -588,7 +587,7 @@ function FeedingScheduleForm({
                 setEndDate(newDate);
               }
             }}
-            className="w-[120px]"
+            className="w-full sm:w-[120px]"
             placeholder="--:--"
           />
         </div>
@@ -617,13 +616,13 @@ function FeedingScheduleForm({
       {interval !== "daily" && (
         <div className="space-y-2">
           <Label>Days of Week</Label>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {[0, 1, 2, 3, 4, 5, 6].map((day) => (
               <Button
                 key={day}
                 type="button"
                 variant={selectedDays.includes(day) ? "default" : "outline"}
-                className="w-full"
+                className="w-full text-xs sm:text-sm"
                 onClick={() => toggleDay(day)}
               >
                 {format(new Date(2024, 0, day + 1), "EEE")}
@@ -650,39 +649,40 @@ function FeedingScheduleForm({
           {sessions.map((session) => (
             <div
               key={session.id}
-              className="flex items-center gap-2 p-3 border rounded-lg"
+              className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 border rounded-lg"
             >
-              <div className="flex items-start gap-2 flex-1">
-                <Clock className="h-4 w-4 text-gray-500 mt-6" />
-                <div className="space-y-1">
-                  <Label className="text-xs">Time</Label>
-                  <Input
-                    type="time"
-                    value={session.time}
-                    onChange={(e) =>
-                      session.id &&
-                      updateSession(session.id, "time", e.target.value)
-                    }
-                    className="w-[120px]"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Amount (kg)</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    value={session.feedAmount}
-                    onChange={(e) =>
-                      session.id &&
-                      updateSession(
-                        session.id,
-                        "feedAmount",
-                        parseFloat(e.target.value)
-                      )
-                    }
-                    className="w-[100px]"
-                  />
+              <div className="flex items-center gap-2 w-full sm:flex-1">
+                <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                  <div className="space-y-1 flex-1">
+                    <Label className="text-xs">Time</Label>
+                    <Input
+                      type="time"
+                      value={session.time}
+                      onChange={(e) =>
+                        session.id &&
+                        updateSession(session.id, "time", e.target.value)
+                      }
+                      className="w-full sm:w-[120px]"
+                    />
+                  </div>
+                  <div className="space-y-1 flex-1">
+                    <Label className="text-xs">Amount (kg)</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      value={session.feedAmount}
+                      onChange={(e) =>
+                        session.id &&
+                        updateSession(
+                          session.id,
+                          "feedAmount",
+                          parseFloat(e.target.value)
+                        )
+                      }
+                      className="w-full sm:w-[100px]"
+                    />
+                  </div>
                 </div>
               </div>
               {sessions.length > 1 && (
@@ -691,6 +691,7 @@ function FeedingScheduleForm({
                   variant="outline"
                   size="sm"
                   onClick={() => session.id && removeSession(session.id)}
+                  className="self-end sm:self-center"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -707,11 +708,16 @@ function FeedingScheduleForm({
         </div>
       </div>
 
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <div className="flex flex-col sm:flex-row justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          className="order-2 sm:order-1"
+        >
           Cancel
         </Button>
-        <Button type="submit">
+        <Button type="submit" className="order-1 sm:order-2">
           {schedule ? "Update Schedule" : "Add Schedule"}
         </Button>
       </div>
