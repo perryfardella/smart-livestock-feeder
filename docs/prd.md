@@ -152,6 +152,7 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 
 - Prioritize accessibility for non-tech-savvy users (simple navigation)
 - Plan for scalability to handle a growing user base
+- Do not use 'any' types, always define a type
 
 ---
 

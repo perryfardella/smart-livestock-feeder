@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { SensorChart } from "./sensor-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -93,45 +93,48 @@ export function SensorDashboard({
     return "";
   };
 
-  const loadSensorData = async (showRefreshLoader = false) => {
-    if (showRefreshLoader) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
+  const loadSensorData = useCallback(
+    async (showRefreshLoader = false) => {
+      if (showRefreshLoader) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
-    try {
-      // Get sensor summary first
-      const summary = await getSensorDataSummary(deviceId);
-      setSensorSummary(summary);
+      try {
+        // Get sensor summary first
+        const summary = await getSensorDataSummary(deviceId);
+        setSensorSummary(summary);
 
-      // Get chart data for each sensor type
-      const timeRangeOptions = getTimeRangeOptions(timeRange);
-      const chartPromises = summary.map(async (sensor) => {
-        const data = await getSensorDataForChart(
-          deviceId,
-          sensor.sensor_type,
-          timeRangeOptions
-        );
-        return {
-          sensorType: sensor.sensor_type,
-          data,
-        };
-      });
+        // Get chart data for each sensor type
+        const timeRangeOptions = getTimeRangeOptions(timeRange);
+        const chartPromises = summary.map(async (sensor) => {
+          const data = await getSensorDataForChart(
+            deviceId,
+            sensor.sensor_type,
+            timeRangeOptions
+          );
+          return {
+            sensorType: sensor.sensor_type,
+            data,
+          };
+        });
 
-      const charts = await Promise.all(chartPromises);
-      setChartData(charts);
-    } catch (error) {
-      console.error("Error loading sensor data:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+        const charts = await Promise.all(chartPromises);
+        setChartData(charts);
+      } catch (error) {
+        console.error("Error loading sensor data:", error);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [deviceId, timeRange]
+  );
 
   useEffect(() => {
     loadSensorData();
-  }, [deviceId, timeRange]);
+  }, [loadSensorData]);
 
   const formatSensorType = (type: string) => {
     return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,12 +82,7 @@ export function FeedingScheduleSection({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load schedules on component mount
-  useEffect(() => {
-    loadSchedules();
-  }, [feederId]);
-
-  const loadSchedules = async () => {
+  const loadSchedules = useCallback(async () => {
     setIsLoading(true);
     try {
       const result = await getFeedingSchedules(feederId);
@@ -102,7 +97,12 @@ export function FeedingScheduleSection({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [feederId]);
+
+  // Load schedules on component mount
+  useEffect(() => {
+    loadSchedules();
+  }, [loadSchedules]);
 
   const handleAddSchedule = async (
     schedule: Omit<FeedingSchedule, "id" | "feederId">

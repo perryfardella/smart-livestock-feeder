@@ -57,11 +57,13 @@ export async function GET(request: NextRequest) {
       interval: schedule.interval,
       daysOfWeek: schedule.days_of_week || [],
       sessions:
-        schedule.feeding_sessions?.map((session: any) => ({
-          id: session.id,
-          time: session.time,
-          feedAmount: parseFloat(session.feed_amount),
-        })) || [],
+        schedule.feeding_sessions?.map(
+          (session: { id: string; time: string; feed_amount: string }) => ({
+            id: session.id,
+            time: session.time,
+            feedAmount: parseFloat(session.feed_amount),
+          })
+        ) || [],
       createdAt: new Date(schedule.created_at),
       updatedAt: new Date(schedule.updated_at),
     }));
@@ -159,11 +161,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the feeding sessions
-    const sessionsToInsert = sessions.map((session: any) => ({
-      feeding_schedule_id: schedule.id,
-      time: session.time,
-      feed_amount: session.feedAmount,
-    }));
+    const sessionsToInsert = sessions.map(
+      (session: { time: string; feedAmount: number }) => ({
+        feeding_schedule_id: schedule.id,
+        time: session.time,
+        feed_amount: session.feedAmount,
+      })
+    );
 
     const { data: createdSessions, error: sessionsError } = await supabase
       .from("feeding_sessions")
