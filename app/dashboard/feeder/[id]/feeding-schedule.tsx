@@ -646,7 +646,7 @@ function FeedingScheduleForm({
             Add Session
           </Button>
         </div>
-        <div className="space-y-3">
+        <div className="max-h-60 overflow-y-auto space-y-3 pr-2">
           {sessions.map((session) => (
             <div
               key={session.id}
