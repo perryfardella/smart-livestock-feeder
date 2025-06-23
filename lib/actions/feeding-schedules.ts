@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { convertSchedulesToMQTT } from "@/lib/utils/mqtt-schedule-converter";
+import {
+  IoTDataPlaneClient,
+  PublishCommand,
+} from "@aws-sdk/client-iot-data-plane";
+import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
 
 export type FeedingSession = {
   id?: string;
@@ -39,6 +44,23 @@ async function convertAndLogMQTTSchedules(
 
     if (userError || !user) {
       console.log(`❌ Unauthorized for MQTT conversion`);
+      return;
+    }
+
+    // First, get the feeder's device_id
+    const { data: feeder, error: feederError } = await supabase
+      .from("feeders")
+      .select("device_id")
+      .eq("id", feederId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (feederError || !feeder) {
+      console.log(
+        `❌ Failed to fetch feeder device_id: ${
+          feederError?.message || "Feeder not found"
+        }`
+      );
       return;
     }
 
@@ -86,10 +108,10 @@ async function convertAndLogMQTTSchedules(
       })) || [];
 
     const mqttMessage = convertSchedulesToMQTT(transformedSchedules);
-    const topic = `${feederId}/writeDataRequest`;
+    const topic = `${feeder.device_id}/writeDataRequest`;
 
     console.log(
-      `🔄 MQTT Conversion - ${operation} operation for feeder ${feederId}:`
+      `🔄 MQTT Conversion - ${operation} operation for feeder ${feederId} (device: ${feeder.device_id}):`
     );
     console.log(`📊 Found ${transformedSchedules.length} schedule(s)`);
     console.log(`📡 MQTT Topic: ${topic}`);
@@ -110,36 +132,57 @@ async function convertAndLogMQTTSchedules(
       });
     }
 
-    // TODO: Uncomment this when ready to send actual MQTT messages
-    // await sendMQTTMessage(topic, mqttMessage);
+    // Send MQTT message to IoT device
+    await sendMQTTMessage(topic, mqttMessage);
   } catch (error) {
     console.error(`❌ Error in MQTT conversion for feeder ${feederId}:`, error);
   }
 }
 
 /**
- * Helper function to send MQTT messages (for future use)
+ * Helper function to send MQTT messages directly using AWS SDK
  */
-// async function sendMQTTMessage(topic: string, payload: object) {
-//   try {
-//     const response = await fetch('/api/mqtt/publish', {
-//       method: 'POST',
-//       headers: { 'Content-Type': 'application/json' },
-//       body: JSON.stringify({
-//         topic: `livestock/${topic}`,
-//         message: JSON.stringify(payload)
-//       })
-//     });
-//
-//     if (!response.ok) {
-//       throw new Error(`MQTT publish failed: ${response.statusText}`);
-//     }
-//
-//     console.log(`✅ MQTT message sent to topic: livestock/${topic}`);
-//   } catch (error) {
-//     console.error(`❌ Failed to send MQTT message:`, error);
-//   }
-// }
+async function sendMQTTMessage(topic: string, payload: object) {
+  try {
+    // Server-side environment variables (no NEXT_PUBLIC_ prefix)
+    const AWS_CONFIG = {
+      region: process.env.AWS_REGION,
+      identityPoolId: process.env.AWS_IDENTITY_POOL_ID,
+      iotEndpoint: process.env.AWS_IOT_ENDPOINT,
+    };
+
+    // Validate environment variables
+    const missing = Object.entries(AWS_CONFIG)
+      .filter(([, value]) => !value)
+      .map(([key]) => key);
+
+    if (missing.length > 0) {
+      throw new Error(`Missing environment variables: ${missing.join(", ")}`);
+    }
+
+    // Initialize IoT client
+    const client = new IoTDataPlaneClient({
+      region: AWS_CONFIG.region!,
+      endpoint: `https://${AWS_CONFIG.iotEndpoint}`,
+      credentials: fromCognitoIdentityPool({
+        clientConfig: { region: AWS_CONFIG.region! },
+        identityPoolId: AWS_CONFIG.identityPoolId!,
+      }),
+    });
+
+    // Publish message
+    await client.send(
+      new PublishCommand({
+        topic: topic.trim(),
+        payload: JSON.stringify(payload),
+      })
+    );
+
+    console.log(`✅ MQTT message sent to topic: ${topic}`);
+  } catch (error) {
+    console.error(`❌ Failed to send MQTT message:`, error);
+  }
+}
 
 export async function getFeedingSchedules(feederId?: string) {
   try {

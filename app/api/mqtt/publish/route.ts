@@ -57,20 +57,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate topic format (basic security check)
-    const allowedTopicPrefixes = ["livestock/", "test/"];
-    const isAllowedTopic = allowedTopicPrefixes.some((prefix) =>
-      topic.startsWith(prefix)
-    );
-
-    if (!isAllowedTopic) {
+    // Basic topic validation (ensure it's not empty and contains valid characters)
+    if (topic.trim().length === 0) {
       return NextResponse.json(
-        {
-          error:
-            "Topic not allowed. Must start with: " +
-            allowedTopicPrefixes.join(", "),
-        },
-        { status: 403 }
+        { error: "Topic cannot be empty" },
+        { status: 400 }
+      );
+    }
+
+    // Ensure topic doesn't contain invalid characters for MQTT
+    const invalidChars = /[#+\s]/;
+    if (invalidChars.test(topic)) {
+      return NextResponse.json(
+        { error: "Topic contains invalid characters. Avoid +, #, and spaces." },
+        { status: 400 }
       );
     }
 
