@@ -1,6 +1,53 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+
+// Custom component to handle feed amount input with empty state
+function FeedAmountInput({
+  value,
+  onChange,
+  className,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  className?: string;
+}) {
+  const [displayValue, setDisplayValue] = useState(value.toString());
+
+  // Update display value when prop value changes
+  useEffect(() => {
+    setDisplayValue(value.toString());
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    setDisplayValue(inputValue);
+
+    // Only update parent if we have a valid number
+    if (inputValue !== "" && !isNaN(parseFloat(inputValue))) {
+      onChange(parseFloat(inputValue));
+    }
+  };
+
+  const handleBlur = () => {
+    // On blur, if empty or invalid, reset to last valid value
+    if (displayValue === "" || isNaN(parseFloat(displayValue))) {
+      setDisplayValue(value.toString());
+    }
+  };
+
+  return (
+    <Input
+      type="number"
+      step="0.1"
+      min="0.1"
+      value={displayValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      className={className}
+    />
+  );
+}
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -460,7 +507,11 @@ function FeedingScheduleForm({
       toast.error("Please add at least one feeding session");
       return;
     }
-    if (sessions.some((session) => session.feedAmount <= 0)) {
+    if (
+      sessions.some(
+        (session) => session.feedAmount <= 0 || isNaN(session.feedAmount)
+      )
+    ) {
       toast.error("All feed amounts must be greater than 0");
       return;
     }
@@ -667,18 +718,11 @@ function FeedingScheduleForm({
                   </div>
                   <div className="space-y-1 flex-1">
                     <Label className="text-xs">Amount (kg)</Label>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      min="0.1"
+                    <FeedAmountInput
                       value={session.feedAmount}
-                      onChange={(e) =>
+                      onChange={(value: number) =>
                         session.id &&
-                        updateSession(
-                          session.id,
-                          "feedAmount",
-                          parseFloat(e.target.value)
-                        )
+                        updateSession(session.id, "feedAmount", value)
                       }
                       className="w-full sm:w-[100px]"
                     />
