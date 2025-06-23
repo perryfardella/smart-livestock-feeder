@@ -11,6 +11,7 @@ export type MQTTScheduleMessage = {
   schedule: MQTTScheduleEntry[];
 };
 
+const INTERVAL_SECONDS = {
   daily: 86400, // 24 hours
   weekly: 604800, // 7 days
   biweekly: 1209600, // 14 days
