@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { convertSchedulesToMQTT } from "@/lib/utils/mqtt-schedule-converter";
 
 export type FeedingSession = {
   id?: string;
@@ -18,6 +19,127 @@ export type FeedingSchedule = {
   daysOfWeek: number[]; // 0-6 for Sunday-Saturday
   sessions: FeedingSession[];
 };
+
+/**
+ * Helper function to convert and log MQTT messages for a feeder's schedules
+ */
+async function convertAndLogMQTTSchedules(
+  feederId: string,
+  operation: "CREATE" | "UPDATE" | "DELETE"
+) {
+  try {
+    // Create a new supabase client to fetch fresh data without triggering recursion
+    const supabase = await createClient();
+
+    // Get the current user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.log(`❌ Unauthorized for MQTT conversion`);
+      return;
+    }
+
+    // Fetch fresh schedules directly from database
+    const { data: schedules, error } = await supabase
+      .from("feeding_schedules")
+      .select(
+        `
+        *,
+        feeding_sessions (
+          id,
+          time,
+          feed_amount
+        )
+      `
+      )
+      .eq("user_id", user.id)
+      .eq("feeder_id", feederId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.log(
+        `❌ Failed to fetch schedules for MQTT conversion: ${error.message}`
+      );
+      return;
+    }
+
+    // Transform the data to match the frontend types
+    const transformedSchedules =
+      schedules?.map((schedule) => ({
+        id: schedule.id,
+        feederId: schedule.feeder_id,
+        startDate: new Date(schedule.start_date),
+        endDate: schedule.end_date ? new Date(schedule.end_date) : undefined,
+        interval: schedule.interval,
+        daysOfWeek: schedule.days_of_week || [],
+        sessions:
+          schedule.feeding_sessions?.map(
+            (session: { id: string; time: string; feed_amount: string }) => ({
+              id: session.id,
+              time: session.time,
+              feedAmount: parseFloat(session.feed_amount),
+            })
+          ) || [],
+      })) || [];
+
+    const mqttMessage = convertSchedulesToMQTT(transformedSchedules);
+    const topic = `${feederId}/writeDataRequest`;
+
+    console.log(
+      `🔄 MQTT Conversion - ${operation} operation for feeder ${feederId}:`
+    );
+    console.log(`📊 Found ${transformedSchedules.length} schedule(s)`);
+    console.log(`📡 MQTT Topic: ${topic}`);
+    console.log(`📡 MQTT Payload:`, JSON.stringify(mqttMessage, null, 2));
+
+    // Log individual schedule details for debugging
+    if (transformedSchedules.length > 0) {
+      console.log(`📋 Schedule Details:`);
+      transformedSchedules.forEach((schedule, index) => {
+        console.log(`  Schedule ${index + 1}:`, {
+          id: schedule.id,
+          interval: schedule.interval,
+          daysOfWeek: schedule.daysOfWeek,
+          sessions: schedule.sessions.length,
+          startDate: schedule.startDate.toISOString(),
+          endDate: schedule.endDate?.toISOString() || "none",
+        });
+      });
+    }
+
+    // TODO: Uncomment this when ready to send actual MQTT messages
+    // await sendMQTTMessage(topic, mqttMessage);
+  } catch (error) {
+    console.error(`❌ Error in MQTT conversion for feeder ${feederId}:`, error);
+  }
+}
+
+/**
+ * Helper function to send MQTT messages (for future use)
+ */
+// async function sendMQTTMessage(topic: string, payload: object) {
+//   try {
+//     const response = await fetch('/api/mqtt/publish', {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify({
+//         topic: `livestock/${topic}`,
+//         message: JSON.stringify(payload)
+//       })
+//     });
+//
+//     if (!response.ok) {
+//       throw new Error(`MQTT publish failed: ${response.statusText}`);
+//     }
+//
+//     console.log(`✅ MQTT message sent to topic: livestock/${topic}`);
+//   } catch (error) {
+//     console.error(`❌ Failed to send MQTT message:`, error);
+//   }
+// }
 
 export async function getFeedingSchedules(feederId?: string) {
   try {
@@ -205,6 +327,11 @@ export async function createFeedingSchedule(
     // Revalidate the feeder page to show updated schedules
     revalidatePath(`/dashboard/feeder/${schedule.feederId}`);
 
+    // Convert and log MQTT message for the updated feeder
+    setTimeout(() => {
+      convertAndLogMQTTSchedules(schedule.feederId, "CREATE");
+    }, 0);
+
     return { success: true, schedule: transformedSchedule };
   } catch (error) {
     console.error("Error creating feeding schedule:", error);
@@ -321,6 +448,11 @@ export async function updateFeedingSchedule(
     // Revalidate the feeder page to show updated schedules
     revalidatePath(`/dashboard/feeder/${schedule.feederId}`);
 
+    // Convert and log MQTT message for the updated feeder
+    setTimeout(() => {
+      convertAndLogMQTTSchedules(schedule.feederId, "UPDATE");
+    }, 0);
+
     return { success: true, schedule: transformedSchedule };
   } catch (error) {
     console.error("Error updating feeding schedule:", error);
@@ -371,6 +503,11 @@ export async function deleteFeedingSchedule(
 
     // Revalidate the feeder page to show updated schedules
     revalidatePath(`/dashboard/feeder/${feederId}`);
+
+    // Convert and log MQTT message for the updated feeder (after deletion)
+    setTimeout(() => {
+      convertAndLogMQTTSchedules(feederId, "DELETE");
+    }, 0);
 
     return { success: true };
   } catch (error) {
