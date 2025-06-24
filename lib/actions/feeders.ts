@@ -165,6 +165,37 @@ export async function getFeederById(id: string): Promise<Feeder | null> {
   return data;
 }
 
+export async function getFeederByDeviceId(
+  deviceId: string
+): Promise<Feeder | null> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/auth/login");
+  }
+
+  const { data, error } = await supabase
+    .from("feeders")
+    .select("*")
+    .eq("device_id", deviceId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return null; // Feeder not found
+    }
+    console.error("Error fetching feeder by device ID:", error);
+    throw new Error("Failed to fetch feeder");
+  }
+
+  return data;
+}
+
 export async function createFeeder(data: CreateFeederData): Promise<Feeder> {
   const supabase = await createClient();
 

@@ -49,7 +49,10 @@ export default async function DashboardPage() {
         /* Feeding Stations Grid */
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {feeders.map((feeder) => (
-            <Link href={`/dashboard/feeder/${feeder.id}`} key={feeder.id}>
+            <Link
+              href={`/dashboard/feeder/${feeder.device_id}`}
+              key={feeder.id}
+            >
               <Card className="h-full cursor-pointer transition-all hover:shadow-lg">
                 <div className="p-6">
                   <div className="mb-4 flex items-center justify-between">
