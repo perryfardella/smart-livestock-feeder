@@ -160,6 +160,11 @@ export function FeedingScheduleSection({
     useState<FeedingSchedule | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [deletingScheduleId, setDeletingScheduleId] = useState<string | null>(
+    null
+  );
 
   const loadSchedules = useCallback(async () => {
     setIsLoading(true);
@@ -186,6 +191,7 @@ export function FeedingScheduleSection({
   const handleAddSchedule = async (
     schedule: Omit<FeedingSchedule, "id" | "feederId">
   ) => {
+    setIsCreating(true);
     try {
       const result = await createFeedingSchedule({
         ...schedule,
@@ -201,6 +207,8 @@ export function FeedingScheduleSection({
     } catch (error) {
       console.error("Error creating schedule:", error);
       toast.error("Failed to create feeding schedule");
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -208,6 +216,7 @@ export function FeedingScheduleSection({
     schedule: Omit<FeedingSchedule, "id" | "feederId">
   ) => {
     if (!editingSchedule?.id) return;
+    setIsUpdating(true);
     try {
       const result = await updateFeedingSchedule(editingSchedule.id, {
         ...schedule,
@@ -224,10 +233,13 @@ export function FeedingScheduleSection({
     } catch (error) {
       console.error("Error updating schedule:", error);
       toast.error("Failed to update feeding schedule");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   const handleDeleteSchedule = async (id: string) => {
+    setDeletingScheduleId(id);
     try {
       const result = await deleteFeedingSchedule(id, feederId);
       if (result.success) {
@@ -239,6 +251,8 @@ export function FeedingScheduleSection({
     } catch (error) {
       console.error("Error deleting schedule:", error);
       toast.error("Failed to delete feeding schedule");
+    } finally {
+      setDeletingScheduleId(null);
     }
   };
 
@@ -356,6 +370,7 @@ export function FeedingScheduleSection({
                   setEditingSchedule(null);
                   setIsDialogOpen(false);
                 }}
+                isSubmitting={editingSchedule ? isUpdating : isCreating}
               />
             </DialogContent>
           </Dialog>
@@ -472,6 +487,11 @@ export function FeedingScheduleSection({
                         <Button
                           variant="outline"
                           size="sm"
+                          disabled={
+                            deletingScheduleId === schedule.id ||
+                            isCreating ||
+                            isUpdating
+                          }
                           onClick={() => {
                             setEditingSchedule(schedule);
                             setIsDialogOpen(true);
@@ -482,11 +502,20 @@ export function FeedingScheduleSection({
                         <Button
                           variant="outline"
                           size="sm"
+                          disabled={
+                            deletingScheduleId !== null ||
+                            isCreating ||
+                            isUpdating
+                          }
                           onClick={() =>
                             schedule.id && handleDeleteSchedule(schedule.id)
                           }
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {deletingScheduleId === schedule.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>
@@ -506,12 +535,14 @@ type FeedingScheduleFormProps = {
   schedule?: FeedingSchedule | null;
   onSubmit: (schedule: Omit<FeedingSchedule, "id" | "feederId">) => void;
   onCancel: () => void;
+  isSubmitting: boolean;
 };
 
 function FeedingScheduleForm({
   schedule,
   onSubmit,
   onCancel,
+  isSubmitting,
 }: FeedingScheduleFormProps) {
   // 🎯 FORM SETUP
   const form = useForm<FeedingScheduleFormData>({
@@ -743,6 +774,7 @@ function FeedingScheduleForm({
               variant="outline"
               size="sm"
               onClick={addSession}
+              disabled={isSubmitting}
             >
               <Plus className="h-4 w-4 mr-1" />
               Add Session
@@ -804,6 +836,7 @@ function FeedingScheduleForm({
                     size="sm"
                     onClick={() => removeSession(index)}
                     className="self-end sm:self-center"
+                    disabled={isSubmitting}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -828,11 +861,25 @@ function FeedingScheduleForm({
             variant="outline"
             onClick={onCancel}
             className="order-2 sm:order-1"
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
-          <Button type="submit" className="order-1 sm:order-2">
-            {schedule ? "Update Schedule" : "Add Schedule"}
+          <Button
+            type="submit"
+            className="order-1 sm:order-2"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                {schedule ? "Updating..." : "Adding..."}
+              </>
+            ) : schedule ? (
+              "Update Schedule"
+            ) : (
+              "Add Schedule"
+            )}
           </Button>
         </div>
       </form>
