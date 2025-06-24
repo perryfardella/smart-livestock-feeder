@@ -1,57 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-
-// Custom component to handle feed amount input with empty state
-function FeedAmountInput({
-  value,
-  onChange,
-  className,
-}: {
-  value: number;
-  onChange: (value: number) => void;
-  className?: string;
-}) {
-  const [displayValue, setDisplayValue] = useState(value.toString());
-
-  // Update display value when prop value changes
-  useEffect(() => {
-    setDisplayValue(value.toString());
-  }, [value]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    setDisplayValue(inputValue);
-
-    // Only update parent if we have a valid number
-    if (inputValue !== "" && !isNaN(parseFloat(inputValue))) {
-      onChange(parseFloat(inputValue));
-    }
-  };
-
-  const handleBlur = () => {
-    // On blur, if empty or invalid, reset to last valid value
-    if (displayValue === "" || isNaN(parseFloat(displayValue))) {
-      setDisplayValue(value.toString());
-    }
-  };
-
-  return (
-    <Input
-      type="number"
-      step="0.1"
-      min="0.1"
-      value={displayValue}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      className={className}
-    />
-  );
-}
+import React, { useState, useEffect, useCallback } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
@@ -60,27 +16,34 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, addDays, isBefore, isAfter } from "date-fns";
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  Calendar as CalendarIcon,
-  Loader2,
-} from "lucide-react";
-import { toast } from "sonner";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { format, addDays, isBefore, isAfter } from "date-fns";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Loader2,
+  Calendar as CalendarIcon,
+} from "lucide-react";
+import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -89,7 +52,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
@@ -114,6 +76,77 @@ export type FeedingSchedule = {
   daysOfWeek: number[]; // 0-6 for Sunday-Saturday
   sessions: FeedingSession[]; // Multiple sessions per day
 };
+
+// 🎯 SCHEMA: Validation rules for the form
+const feedingScheduleSchema = z.object({
+  startDate: z.date({
+    required_error: "Please select a start date",
+  }),
+  endDate: z.date().optional(),
+  interval: z.enum(["daily", "weekly", "biweekly", "four-weekly"], {
+    required_error: "Please select an interval",
+  }),
+  daysOfWeek: z.array(z.number()),
+  sessions: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        time: z.string().min(1, "Time is required"),
+        feedAmount: z.number().min(0.1, "Feed amount must be at least 0.1kg"),
+      })
+    )
+    .min(1, "At least one feeding session is required"),
+});
+
+type FeedingScheduleFormData = z.infer<typeof feedingScheduleSchema>;
+
+// Custom number input component that allows empty fields
+function NumberInput({
+  value,
+  onChange,
+  ...props
+}: {
+  value: number;
+  onChange: (value: number) => void;
+} & React.InputHTMLAttributes<HTMLInputElement>) {
+  const [displayValue, setDisplayValue] = useState(value?.toString() || "");
+
+  // Update display value when prop value changes
+  useEffect(() => {
+    setDisplayValue(value?.toString() || "");
+  }, [value]);
+
+  return (
+    <Input
+      {...props}
+      type="number"
+      value={displayValue}
+      onChange={(e) => {
+        const inputValue = e.target.value;
+        setDisplayValue(inputValue); // Always update display
+
+        // Only update parent if we have a valid number
+        if (inputValue !== "") {
+          const numValue = parseFloat(inputValue);
+          if (!isNaN(numValue)) {
+            onChange(numValue);
+          }
+        }
+      }}
+      onBlur={() => {
+        // On blur, ensure we have a valid value or restore the last valid one
+        if (displayValue === "" || isNaN(parseFloat(displayValue))) {
+          const lastValid = value || 1;
+          setDisplayValue(lastValid.toString());
+          onChange(lastValid);
+        } else {
+          const numValue = parseFloat(displayValue);
+          onChange(numValue);
+        }
+      }}
+    />
+  );
+}
 
 type FeedingScheduleSectionProps = {
   feederId: string;
@@ -468,6 +501,7 @@ export function FeedingScheduleSection({
   );
 }
 
+// 🎯 FORM COMPONENT: React Hook Form implementation
 type FeedingScheduleFormProps = {
   schedule?: FeedingSchedule | null;
   onSubmit: (schedule: Omit<FeedingSchedule, "id" | "feederId">) => void;
@@ -479,292 +513,329 @@ function FeedingScheduleForm({
   onSubmit,
   onCancel,
 }: FeedingScheduleFormProps) {
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    schedule?.startDate || new Date()
-  );
-  const [endDate, setEndDate] = useState<Date | undefined>(schedule?.endDate);
-  const [interval, setInterval] = useState<
-    "daily" | "weekly" | "biweekly" | "four-weekly"
-  >(schedule?.interval || "daily");
-  const [selectedDays, setSelectedDays] = useState<number[]>(
-    schedule?.daysOfWeek || []
-  );
-  const [sessions, setSessions] = useState<FeedingSession[]>(
-    schedule?.sessions || [{ id: "1", time: "08:00", feedAmount: 1 }]
-  );
+  // 🎯 FORM SETUP
+  const form = useForm<FeedingScheduleFormData>({
+    resolver: zodResolver(feedingScheduleSchema),
+    defaultValues: {
+      startDate: schedule?.startDate || new Date(),
+      endDate: schedule?.endDate,
+      interval: schedule?.interval || "daily",
+      daysOfWeek: schedule?.daysOfWeek || [],
+      sessions: schedule?.sessions || [
+        { id: "1", time: "08:00", feedAmount: 1 },
+      ],
+    },
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!startDate) {
-      toast.error("Please select a start date");
-      return;
-    }
-    if (interval !== "daily" && selectedDays.length === 0) {
+  // 🎯 DYNAMIC SESSIONS ARRAY
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "sessions",
+  });
+
+  // 🎯 SUBMIT HANDLER
+  const handleSubmit = (data: FeedingScheduleFormData) => {
+    // Custom validation for days of week
+    if (data.interval !== "daily" && data.daysOfWeek.length === 0) {
       toast.error("Please select at least one day of the week");
-      return;
-    }
-    if (sessions.length === 0) {
-      toast.error("Please add at least one feeding session");
-      return;
-    }
-    if (
-      sessions.some(
-        (session) => session.feedAmount <= 0 || isNaN(session.feedAmount)
-      )
-    ) {
-      toast.error("All feed amounts must be greater than 0");
       return;
     }
 
     onSubmit({
-      startDate,
-      endDate,
-      interval,
-      daysOfWeek: selectedDays,
-      sessions,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      interval: data.interval,
+      daysOfWeek: data.daysOfWeek,
+      sessions: data.sessions,
     });
   };
 
+  // 🎯 HELPER FUNCTIONS
   const toggleDay = (day: number) => {
-    setSelectedDays((current) =>
-      current.includes(day)
-        ? current.filter((d) => d !== day)
-        : [...current, day]
-    );
+    const currentDays = form.getValues("daysOfWeek");
+    const newDays = currentDays.includes(day)
+      ? currentDays.filter((d) => d !== day)
+      : [...currentDays, day];
+    form.setValue("daysOfWeek", newDays);
   };
 
   const addSession = () => {
-    const newSession: FeedingSession = {
+    append({
       id: Math.random().toString(36).substr(2, 9),
       time: "08:00",
       feedAmount: 1,
-    };
-    setSessions([...sessions, newSession]);
+    });
   };
 
-  const removeSession = (sessionId: string) => {
-    if (sessions.length > 1) {
-      setSessions(sessions.filter((s) => s.id !== sessionId));
+  const removeSession = (index: number) => {
+    if (fields.length > 1) {
+      remove(index);
     }
   };
 
-  const updateSession = (
-    sessionId: string,
-    field: keyof FeedingSession,
-    value: string | number
-  ) => {
-    setSessions(
-      sessions.map((session) =>
-        session.id === sessionId ? { ...session, [field]: value } : session
-      )
-    );
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 px-1">
-      <div className="space-y-2">
-        <Label>Start Date & Time</Label>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full sm:w-[240px] justify-start text-left font-normal"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "PPP") : "Pick a date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={startDate}
-                onSelect={setStartDate}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          <Input
-            type="time"
-            value={startDate ? format(startDate, "HH:mm") : "08:00"}
-            onChange={(e) => {
-              if (startDate) {
-                const [hours, minutes] = e.target.value.split(":");
-                const newDate = new Date(startDate);
-                newDate.setHours(parseInt(hours), parseInt(minutes));
-                setStartDate(newDate);
-              } else {
-                const newDate = new Date();
-                const [hours, minutes] = e.target.value.split(":");
-                newDate.setHours(parseInt(hours), parseInt(minutes));
-                setStartDate(newDate);
-              }
-            }}
-            className="w-full sm:w-[120px]"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>End Date & Time (Optional)</Label>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full sm:w-[240px] justify-start text-left font-normal"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "PPP") : "Pick a date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={endDate}
-                onSelect={setEndDate}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          <Input
-            type="time"
-            value={endDate ? format(endDate, "HH:mm") : ""}
-            onChange={(e) => {
-              if (endDate) {
-                const [hours, minutes] = e.target.value.split(":");
-                const newDate = new Date(endDate);
-                newDate.setHours(parseInt(hours), parseInt(minutes));
-                setEndDate(newDate);
-              }
-            }}
-            className="w-full sm:w-[120px]"
-            placeholder="--:--"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="interval">Interval</Label>
-        <Select
-          value={interval}
-          onValueChange={(
-            value: "daily" | "weekly" | "biweekly" | "four-weekly"
-          ) => setInterval(value)}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="daily">Every Day</SelectItem>
-            <SelectItem value="weekly">Every Week</SelectItem>
-            <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
-            <SelectItem value="four-weekly">Every 4 Weeks</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {interval !== "daily" && (
-        <div className="space-y-2">
-          <Label>Days of Week</Label>
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-            {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-              <Button
-                key={day}
-                type="button"
-                variant={selectedDays.includes(day) ? "default" : "outline"}
-                className="w-full text-xs sm:text-sm"
-                onClick={() => toggleDay(day)}
-              >
-                {format(new Date(2024, 0, day + 1), "EEE")}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Feeding Sessions</Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addSession}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add Session
-          </Button>
-        </div>
-        <div className="max-h-60 overflow-y-auto space-y-3 pr-2">
-          {sessions.map((session) => (
-            <div
-              key={session.id}
-              className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 border rounded-lg"
-            >
-              <div className="flex items-center gap-2 w-full sm:flex-1">
-                <div className="flex flex-col sm:flex-row gap-2 flex-1">
-                  <div className="space-y-1 flex-1">
-                    <Label className="text-xs">Time</Label>
-                    <Input
-                      type="time"
-                      value={session.time}
-                      onChange={(e) =>
-                        session.id &&
-                        updateSession(session.id, "time", e.target.value)
-                      }
-                      className="w-full sm:w-[120px]"
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(handleSubmit)}
+        className="space-y-4 px-1"
+      >
+        {/* START DATE & TIME */}
+        <FormField
+          control={form.control}
+          name="startDate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Start Date & Time</FormLabel>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        className="w-full sm:w-[240px] justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value
+                          ? format(field.value, "PPP")
+                          : "Pick a date"}
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      initialFocus
                     />
-                  </div>
-                  <div className="space-y-1 flex-1">
-                    <Label className="text-xs">Amount (kg)</Label>
-                    <FeedAmountInput
-                      value={session.feedAmount}
-                      onChange={(value: number) =>
-                        session.id &&
-                        updateSession(session.id, "feedAmount", value)
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  type="time"
+                  value={field.value ? format(field.value, "HH:mm") : "08:00"}
+                  onChange={(e) => {
+                    const [hours, minutes] = e.target.value.split(":");
+                    const newDate = new Date(field.value || new Date());
+                    newDate.setHours(parseInt(hours), parseInt(minutes));
+                    field.onChange(newDate);
+                  }}
+                  className="w-full sm:w-[120px]"
+                />
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* END DATE & TIME */}
+        <FormField
+          control={form.control}
+          name="endDate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>End Date & Time (Optional)</FormLabel>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        className="w-full sm:w-[240px] justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value
+                          ? format(field.value, "PPP")
+                          : "Pick a date"}
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  type="time"
+                  value={field.value ? format(field.value, "HH:mm") : ""}
+                  onChange={(e) => {
+                    if (field.value) {
+                      const [hours, minutes] = e.target.value.split(":");
+                      const newDate = new Date(field.value);
+                      newDate.setHours(parseInt(hours), parseInt(minutes));
+                      field.onChange(newDate);
+                    }
+                  }}
+                  className="w-full sm:w-[120px]"
+                  placeholder="--:--"
+                />
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* INTERVAL */}
+        <FormField
+          control={form.control}
+          name="interval"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Interval</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="daily">Every Day</SelectItem>
+                  <SelectItem value="weekly">Every Week</SelectItem>
+                  <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
+                  <SelectItem value="four-weekly">Every 4 Weeks</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* DAYS OF WEEK */}
+        {form.watch("interval") !== "daily" && (
+          <FormField
+            control={form.control}
+            name="daysOfWeek"
+            render={() => (
+              <FormItem>
+                <FormLabel>Days of Week</FormLabel>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {[0, 1, 2, 3, 4, 5, 6].map((day) => (
+                    <Button
+                      key={day}
+                      type="button"
+                      variant={
+                        form.getValues("daysOfWeek").includes(day)
+                          ? "default"
+                          : "outline"
                       }
-                      className="w-full sm:w-[100px]"
+                      className="w-full text-xs sm:text-sm"
+                      onClick={() => toggleDay(day)}
+                    >
+                      {format(new Date(2024, 0, day + 1), "EEE")}
+                    </Button>
+                  ))}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {/* FEEDING SESSIONS */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <FormLabel>Feeding Sessions</FormLabel>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addSession}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Session
+            </Button>
+          </div>
+          <div className="max-h-60 overflow-y-auto space-y-3 pr-2">
+            {fields.map((field, index) => (
+              <div
+                key={field.id}
+                className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 border rounded-lg"
+              >
+                <div className="flex items-center gap-2 w-full sm:flex-1">
+                  <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                    {/* SESSION TIME */}
+                    <FormField
+                      control={form.control}
+                      name={`sessions.${index}.time`}
+                      render={({ field }) => (
+                        <FormItem className="space-y-1 flex-1">
+                          <FormLabel className="text-xs">Time</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="time"
+                              {...field}
+                              className="w-full sm:w-[120px]"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* SESSION AMOUNT */}
+                    <FormField
+                      control={form.control}
+                      name={`sessions.${index}.feedAmount`}
+                      render={({ field }) => (
+                        <FormItem className="space-y-1 flex-1">
+                          <FormLabel className="text-xs">Amount (kg)</FormLabel>
+                          <FormControl>
+                            <NumberInput
+                              step="0.1"
+                              min="0.1"
+                              value={field.value}
+                              onChange={field.onChange}
+                              className="w-full sm:w-[100px]"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
                   </div>
                 </div>
+                {fields.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeSession(index)}
+                    className="self-end sm:self-center"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
-              {sessions.length > 1 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => session.id && removeSession(session.id)}
-                  className="self-end sm:self-center"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
+          <div className="text-sm text-gray-500">
+            Total daily amount:{" "}
+            {form
+              .watch("sessions")
+              .reduce((total, session) => total + (session.feedAmount || 0), 0)
+              .toFixed(1)}
+            kg
+          </div>
         </div>
-        <div className="text-sm text-gray-500">
-          Total daily amount:{" "}
-          {sessions
-            .reduce((total, session) => total + session.feedAmount, 0)
-            .toFixed(1)}
-          kg
-        </div>
-      </div>
 
-      <div className="flex flex-col sm:flex-row justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          className="order-2 sm:order-1"
-        >
-          Cancel
-        </Button>
-        <Button type="submit" className="order-1 sm:order-2">
-          {schedule ? "Update Schedule" : "Add Schedule"}
-        </Button>
-      </div>
-    </form>
+        {/* SUBMIT BUTTONS */}
+        <div className="flex flex-col sm:flex-row justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            className="order-2 sm:order-1"
+          >
+            Cancel
+          </Button>
+          <Button type="submit" className="order-1 sm:order-2">
+            {schedule ? "Update Schedule" : "Add Schedule"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }
