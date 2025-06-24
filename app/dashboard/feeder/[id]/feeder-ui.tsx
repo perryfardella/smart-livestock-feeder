@@ -57,10 +57,27 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
 
     checkConnection();
 
-    // Check connection status every 30 seconds
-    const interval = setInterval(checkConnection, 30000);
+    // Check connection status every 2 minutes instead of 30 seconds to reduce server load
+    const interval = setInterval(() => {
+      // Only check if the page is visible to avoid unnecessary requests
+      if (!document.hidden) {
+        checkConnection();
+      }
+    }, 120000); // 2 minutes = 120,000ms
 
-    return () => clearInterval(interval);
+    // Also check when the page becomes visible again
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkConnection();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [feeder.device_id]);
 
   // Get feeder status

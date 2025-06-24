@@ -6,11 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Clock, Database } from "lucide-react";
 import {
-  getSensorDataForChart,
-  getSensorDataSummary,
+  getAllSensorDataOptimized,
   type SensorDataSummary,
 } from "@/lib/actions/sensor-data";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface SensorDashboardProps {
   deviceId: string;
@@ -102,28 +102,22 @@ export function SensorDashboard({
       }
 
       try {
-        // Get sensor summary first
-        const summary = await getSensorDataSummary(deviceId);
-        setSensorSummary(summary);
-
-        // Get chart data for each sensor type
         const timeRangeOptions = getTimeRangeOptions(timeRange);
-        const chartPromises = summary.map(async (sensor) => {
-          const data = await getSensorDataForChart(
-            deviceId,
-            sensor.sensor_type,
-            timeRangeOptions
-          );
-          return {
-            sensorType: sensor.sensor_type,
-            data,
-          };
-        });
 
-        const charts = await Promise.all(chartPromises);
-        setChartData(charts);
+        // Use the optimized function to get all data in one request
+        const { summary, chartData } = await getAllSensorDataOptimized(
+          deviceId,
+          timeRangeOptions
+        );
+
+        setSensorSummary(summary);
+        setChartData(chartData);
       } catch (error) {
         console.error("Error loading sensor data:", error);
+        // Don't show toast error on initial load to avoid spamming users
+        if (showRefreshLoader) {
+          toast.error("Failed to refresh sensor data");
+        }
       } finally {
         setLoading(false);
         setRefreshing(false);

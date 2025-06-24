@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -166,10 +172,16 @@ export function FeedingScheduleSection({
     null
   );
 
+  // Memoize feederId to prevent unnecessary re-renders
+  const memoizedFeederId = useMemo(() => feederId, [feederId]);
+
+  // Track if we've loaded schedules initially to prevent duplicate requests
+  const hasLoadedInitially = useRef(false);
+
   const loadSchedules = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await getFeedingSchedules(feederId);
+      const result = await getFeedingSchedules(memoizedFeederId);
       if (result.success) {
         setSchedules(result.schedules);
       } else {
@@ -181,11 +193,14 @@ export function FeedingScheduleSection({
     } finally {
       setIsLoading(false);
     }
-  }, [feederId]);
+  }, [memoizedFeederId]);
 
-  // Load schedules on component mount
+  // Load schedules only once on component mount
   useEffect(() => {
-    loadSchedules();
+    if (!hasLoadedInitially.current) {
+      hasLoadedInitially.current = true;
+      loadSchedules();
+    }
   }, [loadSchedules]);
 
   const handleAddSchedule = async (
@@ -195,7 +210,7 @@ export function FeedingScheduleSection({
     try {
       const result = await createFeedingSchedule({
         ...schedule,
-        feederId,
+        feederId: memoizedFeederId,
       });
       if (result.success) {
         await loadSchedules(); // Refresh the list
@@ -220,7 +235,7 @@ export function FeedingScheduleSection({
     try {
       const result = await updateFeedingSchedule(editingSchedule.id, {
         ...schedule,
-        feederId,
+        feederId: memoizedFeederId,
       });
       if (result.success) {
         await loadSchedules(); // Refresh the list
@@ -241,7 +256,7 @@ export function FeedingScheduleSection({
   const handleDeleteSchedule = async (id: string) => {
     setDeletingScheduleId(id);
     try {
-      const result = await deleteFeedingSchedule(id, feederId);
+      const result = await deleteFeedingSchedule(id, memoizedFeederId);
       if (result.success) {
         await loadSchedules(); // Refresh the list
         toast.success("Feeding schedule deleted successfully");

@@ -219,3 +219,99 @@ export async function getFeederConnectionStatus(
     lastCommunication,
   };
 }
+
+export async function getAllSensorDataOptimized(
+  deviceId: string,
+  timeRange: TimeRangeOptions = { hours: 24, limit: 200 }
+): Promise<{
+  summary: SensorDataSummary[];
+  chartData: {
+    sensorType: string;
+    data: { timestamp: string; value: number }[];
+  }[];
+}> {
+  const supabase = await createClient();
+
+  // Get all sensor data in one query with time filtering
+  let query = supabase
+    .from("sensor_data")
+    .select("sensor_type, sensor_value, timestamp")
+    .eq("device_id", deviceId)
+    .order("timestamp", { ascending: false });
+
+  if (timeRange.hours) {
+    const startTime = new Date(
+      Date.now() - timeRange.hours * 60 * 60 * 1000
+    ).toISOString();
+    query = query.gte("timestamp", startTime);
+  } else if (timeRange.days) {
+    const startTime = new Date(
+      Date.now() - timeRange.days * 24 * 60 * 60 * 1000
+    ).toISOString();
+    query = query.gte("timestamp", startTime);
+  }
+
+  if (timeRange.limit) {
+    query = query.limit(timeRange.limit * 10); // Get more data for multiple sensor types
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching optimized sensor data:", error);
+    throw new Error("Failed to fetch sensor data");
+  }
+
+  if (!data || data.length === 0) {
+    return { summary: [], chartData: [] };
+  }
+
+  // Group by sensor type
+  const sensorGroups = data.reduce((acc, reading) => {
+    if (!acc[reading.sensor_type]) {
+      acc[reading.sensor_type] = [];
+    }
+    acc[reading.sensor_type].push(reading);
+    return acc;
+  }, {} as Record<string, typeof data>);
+
+  // Create summary
+  const summary: SensorDataSummary[] = Object.entries(sensorGroups).map(
+    ([sensorType, readings]) => {
+      const sortedReadings = readings.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      const latest = sortedReadings[0];
+
+      return {
+        sensor_type: sensorType,
+        latest_value: latest.sensor_value,
+        latest_timestamp: latest.timestamp,
+        readings_count: readings.length,
+      };
+    }
+  );
+
+  // Create chart data (limit per sensor type)
+  const chartData = Object.entries(sensorGroups).map(
+    ([sensorType, readings]) => {
+      const sortedReadings = readings
+        .sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        )
+        .slice(0, timeRange.limit || 200);
+
+      return {
+        sensorType,
+        data: sortedReadings.map((item) => ({
+          timestamp: item.timestamp,
+          value: item.sensor_value,
+        })),
+      };
+    }
+  );
+
+  return { summary, chartData };
+}
