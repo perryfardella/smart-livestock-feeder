@@ -50,7 +50,7 @@ export default function Home() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Join Waitlist - It's Free
+                  Join Waitlist - It&apos;s Free
                 </a>
               </Button>
             </div>
@@ -97,7 +97,7 @@ export default function Home() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              Managing Animals Shouldn't Be This Stressful
+              Managing Animals Shouldn&apos;t Be This Stressful
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Every hobby farmer faces these daily challenges that turn animal
@@ -233,8 +233,8 @@ export default function Home() {
                 Set Your Schedule
               </h3>
               <p className="text-gray-600">
-                Create feeding schedules that match your animals' needs. Daily,
-                weekly, or custom patterns—you decide.
+                Create feeding schedules that match your animals&apos; needs.
+                Daily, weekly, or custom patterns—you decide.
               </p>
             </div>
             <div className="text-center">
@@ -280,8 +280,8 @@ export default function Home() {
                 <CardTitle className="text-xl">Live Monitoring</CardTitle>
                 <CardDescription className="text-base">
                   See your animals in real-time with HD camera feeds. Know
-                  instantly when they're feeding and monitor their behavior from
-                  anywhere.
+                  instantly when they&apos;re feeding and monitor their behavior
+                  from anywhere.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -401,7 +401,7 @@ export default function Home() {
           </h2>
           <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
             Join 200+ hobby farmers getting early access to SmartFeeder. Launch
-            is October 2025—don't miss out on early bird pricing.
+            is October 2025—don&apos;t miss out on early bird pricing.
           </p>
           <div className="bg-white rounded-xl shadow-xl p-6 sm:p-8 max-w-xl mx-auto">
             <div className="flex justify-center mb-4">
