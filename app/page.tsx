@@ -270,9 +270,9 @@ export default function Home() {
                   <Image
                     src="https://images.unsplash.com/photo-1516467508483-a7212febe31a?q=80&w=2070"
                     alt="Live monitoring of Australian livestock"
-                    width={800}
-                    height={600}
+                    fill
                     priority={true}
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover"
                   />
                 </div>
@@ -291,9 +291,9 @@ export default function Home() {
                   <Image
                     src="https://images.unsplash.com/photo-1500595046743-cd271d694d30?q=80&w=2070"
                     alt="Smart automated feeding schedules"
-                    width={800}
-                    height={600}
+                    fill
                     loading="lazy"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover"
                   />
                 </div>
@@ -312,9 +312,9 @@ export default function Home() {
                   <Image
                     src="https://images.unsplash.com/photo-1560114928-40f1f1eb26a0?q=80&w=2070"
                     alt="Instant remote control of feeders"
-                    width={800}
-                    height={600}
+                    fill
                     loading="lazy"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover"
                   />
                 </div>
