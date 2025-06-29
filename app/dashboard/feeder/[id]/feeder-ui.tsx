@@ -21,6 +21,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { FeederForm } from "./feeder-form";
 import { DeleteFeeder } from "./delete-feeder";
@@ -41,6 +43,9 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
     useState<FeederConnectionStatus | null>(null);
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [feedDialogOpen, setFeedDialogOpen] = useState(false);
+  const [feedAmount, setFeedAmount] = useState("");
+  const [isReleasingFeed, setIsReleasingFeed] = useState(false);
 
   // Check connection status on component mount and periodically
   useEffect(() => {
@@ -111,6 +116,42 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
     }
   };
 
+  const handleReleaseFeed = async () => {
+    const amount = parseFloat(feedAmount);
+
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Please enter a valid feed amount greater than 0");
+      return;
+    }
+
+    setIsReleasingFeed(true);
+    try {
+      const topic = `${feeder.device_id}/writeDataRequest`;
+      const message = JSON.stringify({ manualFeedQuantity: amount });
+
+      const response = await fetch("/api/mqtt/publish", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ topic, message }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to publish MQTT message");
+      }
+
+      toast.success(`Successfully released ${amount}kg of feed!`);
+      setFeedDialogOpen(false);
+      setFeedAmount("");
+    } catch (error) {
+      toast.error("Failed to release feed. Please try again.");
+      console.error("Error releasing feed:", error);
+    } finally {
+      setIsReleasingFeed(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl">
@@ -155,17 +196,49 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
               <span className="sm:hidden">Sync</span>
             </Button>
 
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={() => {
-                toast.success("Feed released successfully!");
-              }}
-            >
-              <Utensils className="h-4 w-4" />
-              <span className="hidden sm:inline">Release Feed</span>
-              <span className="sm:hidden">Feed</span>
-            </Button>
+            <Dialog open={feedDialogOpen} onOpenChange={setFeedDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Utensils className="h-4 w-4" />
+                  <span className="hidden sm:inline">Release Feed</span>
+                  <span className="sm:hidden">Feed</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Release Feed - {feeder.name}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="feed-amount">Feed Amount (kg)</Label>
+                    <Input
+                      id="feed-amount"
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      max="10"
+                      value={feedAmount}
+                      onChange={(e) => setFeedAmount(e.target.value)}
+                      placeholder="Enter amount in kg"
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setFeedDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleReleaseFeed}
+                      disabled={isReleasingFeed || !feedAmount}
+                    >
+                      {isReleasingFeed ? "Releasing..." : "Release Feed"}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             <Dialog>
               <DialogTrigger asChild>
