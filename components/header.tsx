@@ -46,12 +46,6 @@ export function Header() {
                   Dashboard
                 </Link>
                 <Link
-                  href="/iot-data"
-                  className="text-sm font-medium hover:underline"
-                >
-                  IoT Data
-                </Link>
-                <Link
                   href="/mqtt-sender"
                   className="text-sm font-medium hover:underline"
                 >
