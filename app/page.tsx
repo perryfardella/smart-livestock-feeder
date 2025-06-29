@@ -268,7 +268,7 @@ export default function Home() {
               <CardHeader>
                 <div className="relative h-48 mb-4 rounded-lg overflow-hidden">
                   <Image
-                    src="https://images.unsplash.com/photo-1592982537447-7440770cbfc9?q=80&w=2070"
+                    src="https://images.unsplash.com/photo-1516467508483-a7212febe31a?q=80&w=2070"
                     alt="Live monitoring of Australian livestock"
                     width={800}
                     height={600}
@@ -310,7 +310,7 @@ export default function Home() {
               <CardHeader>
                 <div className="relative h-48 mb-4 rounded-lg overflow-hidden">
                   <Image
-                    src="https://images.unsplash.com/photo-1546445317-29f4545e9d53?q=80&w=2070"
+                    src="https://images.unsplash.com/photo-1560114928-40f1f1eb26a0?q=80&w=2070"
                     alt="Instant remote control of feeders"
                     width={800}
                     height={600}
