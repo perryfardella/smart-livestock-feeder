@@ -349,82 +349,78 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
           {/* Feeder Details */}
           <Card className="p-6">
             <h2 className="mb-4 text-xl font-semibold">Feeder Details</h2>
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Name:</span>
-                <span className="font-medium">{feeder.name}</span>
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+                <div className="space-y-1">
+                  <span className="text-xs text-gray-500 uppercase tracking-wide">
+                    Name
+                  </span>
+                  <p className="font-medium">{feeder.name}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-gray-500 uppercase tracking-wide">
+                    Status
+                  </span>
+                  <div>
+                    {feederStatus ? (
+                      <ConnectionStatus
+                        status={feederStatus.status}
+                        size="sm"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-600">Checking...</span>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-gray-500 uppercase tracking-wide">
+                    Location
+                  </span>
+                  <p className="font-medium">{feeder.location || "Not set"}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-gray-500 uppercase tracking-wide">
+                    Timezone
+                  </span>
+                  <p className="font-medium">
+                    {feeder.timezone.replace("_", " ")}
+                  </p>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Device ID:</span>
-                <span className="font-mono text-sm">{feeder.device_id}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Location:</span>
-                <span className="font-medium">
-                  {feeder.location || "Not set"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Timezone:</span>
-                <span className="font-medium">
-                  {feeder.timezone.replace("_", " ")}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Status:</span>
-                {feederStatus ? (
-                  <ConnectionStatus status={feederStatus.status} size="sm" />
-                ) : (
-                  <span className="text-sm text-gray-600">Checking...</span>
-                )}
+              <div className="pt-2 border-t border-gray-100">
+                <div className="space-y-1">
+                  <span className="text-xs text-gray-500 uppercase tracking-wide">
+                    Device ID
+                  </span>
+                  <p className="font-mono text-sm text-gray-700">
+                    {feeder.device_id}
+                  </p>
+                </div>
               </div>
               {feeder.description && (
-                <div>
-                  <span className="text-sm text-gray-600">Description:</span>
-                  <p className="mt-1 text-sm">{feeder.description}</p>
+                <div className="pt-2 border-t border-gray-100">
+                  <div className="space-y-1">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">
+                      Description
+                    </span>
+                    <p className="text-sm text-gray-700">
+                      {feeder.description}
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
-          </Card>
-
-          {/* Settings */}
-          <Card className="p-6">
-            <h2 className="mb-4 text-xl font-semibold">Settings</h2>
-            <div className="space-y-4">
-              {Object.keys(feeder.settings).length > 0 ? (
-                <div className="space-y-2">
-                  {Object.entries(feeder.settings).map(([key, value]) => (
-                    <div key={key} className="flex justify-between">
-                      <span className="text-sm text-gray-600 capitalize">
-                        {key.replace(/([A-Z])/g, " $1").trim()}:
-                      </span>
-                      <span className="font-medium text-sm">
-                        {typeof value === "object"
-                          ? JSON.stringify(value)
-                          : String(value)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-600">
-                  No custom settings configured
-                </p>
               )}
             </div>
           </Card>
 
           {/* Feeding Schedule */}
-          <div className="lg:col-span-2">
-            <FeedingScheduleSection feederId={feeder.id} />
-          </div>
+          <FeedingScheduleSection feederId={feeder.id} />
 
           {/* Activity Log */}
-          <Card className="p-6 lg:col-span-2">
+          <Card className="p-6">
             <h2 className="mb-4 text-xl font-semibold">Recent Activity</h2>
             <div className="space-y-4">
               <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4">
