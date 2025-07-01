@@ -288,12 +288,6 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
                 <div className="space-y-1">
                   <span className="text-xs text-gray-500 uppercase tracking-wide">
-                    Name
-                  </span>
-                  <p className="font-medium">{feeder.name}</p>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs text-gray-500 uppercase tracking-wide">
                     Status
                   </span>
                   <div>
@@ -345,12 +339,6 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
                       <span className="text-sm text-gray-600">Checking...</span>
                     )}
                   </div>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs text-gray-500 uppercase tracking-wide">
-                    Location
-                  </span>
-                  <p className="font-medium">{feeder.location || "Not set"}</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-gray-500 uppercase tracking-wide">
