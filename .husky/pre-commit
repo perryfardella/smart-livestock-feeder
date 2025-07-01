@@ -5,4 +5,7 @@ pnpm test
 echo "🔍 Running linter..."
 pnpm lint
 
+echo "🏗️ Building project..."
+pnpm build
+
 echo "✅ All checks passed! Proceeding with commit..."
