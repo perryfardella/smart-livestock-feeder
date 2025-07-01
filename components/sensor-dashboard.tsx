@@ -75,7 +75,7 @@ export function SensorDashboard({
   const [sensorSummary, setSensorSummary] = useState<SensorDataSummary[]>([]);
   const [chartData, setChartData] = useState<SensorChartData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<TimePeriod>("weekly"); // Default to weekly
+  const [timeRange, setTimeRange] = useState<TimePeriod>("all-time"); // Default to all-time
 
   const getTimeRangeOptions = (range: TimePeriod) => {
     const config = TIME_PERIOD_CONFIG[range];
@@ -158,6 +158,22 @@ export function SensorDashboard({
     );
   };
 
+  // Helper function to get timeframe description for no data message
+  const getTimeframeDescription = (range: TimePeriod): string => {
+    switch (range) {
+      case "daily":
+        return "last day";
+      case "weekly":
+        return "last week";
+      case "monthly":
+        return "last month";
+      case "all-time":
+        return "any timeframe";
+      default:
+        return "selected timeframe";
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -209,12 +225,8 @@ export function SensorDashboard({
                 No sensor data found
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                No sensor readings found for device ID: {deviceId} in the{" "}
-                {TIME_PERIOD_CONFIG[timeRange].label.toLowerCase()} time period
-              </p>
-              <p className="mt-2 text-xs text-gray-400">
-                Try the &quot;All Time&quot; option above to check if any data
-                exists
+                No sensor readings found for the{" "}
+                {getTimeframeDescription(timeRange)}
               </p>
             </div>
           </CardContent>
