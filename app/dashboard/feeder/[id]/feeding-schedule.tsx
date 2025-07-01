@@ -69,7 +69,7 @@ import {
 
 export type FeedingSession = {
   id?: string;
-  time: string; // HH:mm format
+  time: string; // HH:MM format (consistent across FE/BE)
   feedAmount: number;
 };
 

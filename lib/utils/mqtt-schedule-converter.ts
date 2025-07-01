@@ -91,6 +91,11 @@ function createTimezoneAwareDate(
   timeString: string,
   timezone: string
 ): Date {
+  // Check if baseDate is valid
+  if (!baseDate || !(baseDate instanceof Date) || isNaN(baseDate.getTime())) {
+    return new Date(NaN); // Return invalid date
+  }
+
   const [hours, minutes] = timeString.split(":");
 
   // For UTC timezone, use simple approach
@@ -104,11 +109,15 @@ function createTimezoneAwareDate(
   // Get just the date part (YYYY-MM-DD) from the base date
   const dateStr = baseDate.toISOString().split("T")[0];
 
-  // Create a time string in the target timezone
+  // Time is now consistently in HH:MM format
   const timeStr = `${dateStr}T${timeString}:00`;
 
   // Parse this as a local time, then convert to UTC considering the timezone
   const localDate = new Date(timeStr);
+
+  if (isNaN(localDate.getTime())) {
+    return new Date(NaN);
+  }
 
   // Get what this time would be in the target timezone
   const targetTime = new Date(

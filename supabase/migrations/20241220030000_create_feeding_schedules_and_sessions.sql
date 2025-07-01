@@ -39,13 +39,14 @@ comment on column public.feeding_schedules.days_of_week is 'Array of day numbers
 create table public.feeding_sessions (
   id uuid default gen_random_uuid() primary key,
   feeding_schedule_id uuid not null references public.feeding_schedules (id) on delete cascade,
-  time time not null,
+  time varchar(5) not null,
   feed_amount numeric(10,2) not null,
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null,
   
   -- Constraints
-  constraint positive_feed_amount check (feed_amount > 0)
+  constraint positive_feed_amount check (feed_amount > 0),
+  constraint valid_time_format check (time ~ '^([0-1][0-9]|2[0-3]):[0-5][0-9]$')
 );
 
 comment on table public.feeding_sessions is 'Stores individual feeding sessions within a schedule, defining specific times and amounts for each feeding.';

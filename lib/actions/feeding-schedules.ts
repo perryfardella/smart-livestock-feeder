@@ -11,7 +11,7 @@ import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
 
 export type FeedingSession = {
   id?: string;
-  time: string; // HH:mm format
+  time: string; // HH:MM format (consistent across FE/BE)
   feedAmount: number;
 };
 
@@ -90,22 +90,54 @@ async function convertAndLogMQTTSchedules(
 
     // Transform the data to match the frontend types
     const transformedSchedules =
-      schedules?.map((schedule) => ({
-        id: schedule.id,
-        feederId: schedule.feeder_id,
-        startDate: new Date(schedule.start_date),
-        endDate: schedule.end_date ? new Date(schedule.end_date) : undefined,
-        interval: schedule.interval,
-        daysOfWeek: schedule.days_of_week || [],
-        sessions:
-          schedule.feeding_sessions?.map(
-            (session: { id: string; time: string; feed_amount: string }) => ({
-              id: session.id,
-              time: session.time,
-              feedAmount: parseFloat(session.feed_amount),
-            })
-          ) || [],
-      })) || [];
+      schedules
+        ?.filter((schedule) => {
+          // Validate start_date
+          if (!schedule.start_date) {
+            console.warn(
+              `❌ Schedule ${schedule.id} has null/undefined start_date`
+            );
+            return false;
+          }
+          const startDate = new Date(schedule.start_date);
+          if (isNaN(startDate.getTime())) {
+            console.warn(
+              `❌ Schedule ${schedule.id} has invalid start_date: ${schedule.start_date}`
+            );
+            return false;
+          }
+          return true;
+        })
+        .map((schedule) => {
+          const startDate = new Date(schedule.start_date);
+          const endDate = schedule.end_date
+            ? (() => {
+                const endDate = new Date(schedule.end_date);
+                return isNaN(endDate.getTime()) ? undefined : endDate;
+              })()
+            : undefined;
+
+          return {
+            id: schedule.id,
+            feederId: schedule.feeder_id,
+            startDate,
+            endDate,
+            interval: schedule.interval,
+            daysOfWeek: schedule.days_of_week || [],
+            sessions:
+              schedule.feeding_sessions?.map(
+                (session: {
+                  id: string;
+                  time: string;
+                  feed_amount: string;
+                }) => ({
+                  id: session.id,
+                  time: session.time,
+                  feedAmount: parseFloat(session.feed_amount),
+                })
+              ) || [],
+          };
+        }) || [];
 
     const mqttMessage = convertSchedulesToMQTT(
       transformedSchedules,
@@ -239,22 +271,54 @@ export async function getFeedingSchedules(feederId?: string) {
 
     // Transform the data to match the frontend types
     const transformedSchedules =
-      schedules?.map((schedule) => ({
-        id: schedule.id,
-        feederId: schedule.feeder_id,
-        startDate: new Date(schedule.start_date),
-        endDate: schedule.end_date ? new Date(schedule.end_date) : undefined,
-        interval: schedule.interval,
-        daysOfWeek: schedule.days_of_week || [],
-        sessions:
-          schedule.feeding_sessions?.map(
-            (session: { id: string; time: string; feed_amount: string }) => ({
-              id: session.id,
-              time: session.time,
-              feedAmount: parseFloat(session.feed_amount),
-            })
-          ) || [],
-      })) || [];
+      schedules
+        ?.filter((schedule) => {
+          // Validate start_date
+          if (!schedule.start_date) {
+            console.warn(
+              `❌ Schedule ${schedule.id} has null/undefined start_date`
+            );
+            return false;
+          }
+          const startDate = new Date(schedule.start_date);
+          if (isNaN(startDate.getTime())) {
+            console.warn(
+              `❌ Schedule ${schedule.id} has invalid start_date: ${schedule.start_date}`
+            );
+            return false;
+          }
+          return true;
+        })
+        .map((schedule) => {
+          const startDate = new Date(schedule.start_date);
+          const endDate = schedule.end_date
+            ? (() => {
+                const endDate = new Date(schedule.end_date);
+                return isNaN(endDate.getTime()) ? undefined : endDate;
+              })()
+            : undefined;
+
+          return {
+            id: schedule.id,
+            feederId: schedule.feeder_id,
+            startDate,
+            endDate,
+            interval: schedule.interval,
+            daysOfWeek: schedule.days_of_week || [],
+            sessions:
+              schedule.feeding_sessions?.map(
+                (session: {
+                  id: string;
+                  time: string;
+                  feed_amount: string;
+                }) => ({
+                  id: session.id,
+                  time: session.time,
+                  feedAmount: parseFloat(session.feed_amount),
+                })
+              ) || [],
+          };
+        }) || [];
 
     return { success: true, schedules: transformedSchedules };
   } catch (error) {
