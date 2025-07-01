@@ -43,12 +43,12 @@ export function DeleteFeeder({
     startTransition(async () => {
       try {
         await deleteFeeder(feeder.id);
-        toast.success("Feeder deleted successfully!");
+        toast.success("Feeder removed from your account!");
         setOpen(false);
         router.push("/dashboard");
       } catch (error) {
-        toast.error("Failed to delete feeder");
-        console.error("Error deleting feeder:", error);
+        toast.error("Failed to remove feeder");
+        console.error("Error removing feeder:", error);
       }
     });
   };
@@ -62,15 +62,17 @@ export function DeleteFeeder({
           className="flex items-center gap-2"
         >
           <Trash2 className="h-4 w-4" />
-          Delete Feeder
+          Remove Feeder
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogTitle>Remove feeder from your account?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the
-            feeder &ldquo;{feeder.name}&rdquo; and remove all associated data.
+            This will remove the feeder &ldquo;{feeder.name}&rdquo; from your
+            account, but all feeder data (feeding schedules, sensor readings)
+            will be preserved. You can reclaim this feeder later by adding the
+            same device ID again.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -80,7 +82,7 @@ export function DeleteFeeder({
             disabled={isPending}
             className="bg-red-600 hover:bg-red-700"
           >
-            {isPending ? "Deleting..." : "Delete"}
+            {isPending ? "Removing..." : "Remove Feeder"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
