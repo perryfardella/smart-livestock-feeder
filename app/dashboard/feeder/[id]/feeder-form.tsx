@@ -61,7 +61,6 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
   const [timezone, setTimezone] = useState(
     feeder?.timezone || "Australia/Sydney"
   );
-  const [isActive, setIsActive] = useState(feeder?.is_active ?? true);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +89,6 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
             location,
             description,
             timezone,
-            is_active: isActive,
           });
           toast.success("Feeder created successfully!");
         } else if (feeder) {
@@ -99,7 +97,6 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
             location,
             description,
             timezone,
-            is_active: isActive,
           });
           toast.success("Feeder updated successfully!");
         }
@@ -112,7 +109,6 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
           setLocation("");
           setDescription("");
           setTimezone("Australia/Sydney");
-          setIsActive(true);
         }
         onSuccess?.();
       } catch (error) {
@@ -207,17 +203,6 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
               placeholder="Enter feeder description (optional)"
               rows={3}
             />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="isActive"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              className="h-4 w-4"
-            />
-            <Label htmlFor="isActive">Active</Label>
           </div>
 
           <div className="flex justify-end gap-2">

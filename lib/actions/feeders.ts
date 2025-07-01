@@ -30,7 +30,6 @@ export interface CreateFeederData {
   description?: string;
   location?: string;
   timezone?: string;
-  is_active?: boolean;
   settings?: Record<string, unknown>;
 }
 
@@ -39,7 +38,6 @@ export interface UpdateFeederData {
   description?: string;
   location?: string;
   timezone?: string;
-  is_active?: boolean;
   settings?: Record<string, unknown>;
 }
 
@@ -341,53 +339,52 @@ export async function createFeeder(data: CreateFeederData): Promise<Feeder> {
     redirect("/auth/login");
   }
 
-  // First, check if there's an orphaned feeder with this device_id that we can reclaim
-  const { data: orphanedFeeders, error: orphanedError } = await supabase.rpc(
-    "find_orphaned_feeder",
-    { device_id_param: data.device_id }
-  );
-
-  if (orphanedError) {
-    console.error("Error checking for orphaned feeder:", orphanedError);
-    throw new Error("Failed to check for existing feeder");
-  }
-
-  // If we found an orphaned feeder, reclaim it
-  if (orphanedFeeders && orphanedFeeders.length > 0) {
-    const existingOrphanedFeeder = orphanedFeeders[0];
-
-    const { data: reclaimedFeeders, error: reclaimError } = await supabase.rpc(
-      "reclaim_orphaned_feeder",
-      {
-        feeder_id: existingOrphanedFeeder.id,
-        new_user_id: user.id,
-        new_name: data.name,
-        new_description: data.description,
-        new_location: data.location,
-        new_timezone:
-          data.timezone ??
-          existingOrphanedFeeder.timezone ??
-          "Australia/Sydney",
-        new_is_active: data.is_active ?? true,
-        new_settings: data.settings ?? existingOrphanedFeeder.settings ?? {},
-      }
+  // First check if an orphaned feeder with this device_id exists
+  try {
+    const { data: orphanedFeeder, error: findError } = await supabase.rpc(
+      "find_orphaned_feeder",
+      { device_id_param: data.device_id }
     );
 
-    if (reclaimError || !reclaimedFeeders || reclaimedFeeders.length === 0) {
-      console.error("Error reclaiming orphaned feeder:", reclaimError);
-      throw new Error("Failed to reclaim existing feeder");
-    }
+    if (!findError && orphanedFeeder && orphanedFeeder.length > 0) {
+      // Found an orphaned feeder, reclaim it
+      const { data: reclaimedFeeder, error: reclaimError } = await supabase.rpc(
+        "reclaim_orphaned_feeder",
+        {
+          feeder_id: orphanedFeeder[0].id,
+          new_user_id: user.id,
+          new_name: data.name,
+          new_description: data.description || null,
+          new_location: data.location || null,
+          new_timezone: data.timezone || "Australia/Sydney",
+          new_is_active: true, // Always set to active by default
+          new_settings: data.settings || {},
+        }
+      );
 
-    revalidatePath("/dashboard");
-    return reclaimedFeeders[0];
+      if (reclaimError) {
+        console.error("Error reclaiming orphaned feeder:", reclaimError);
+        throw new Error("Failed to reclaim orphaned feeder");
+      }
+
+      if (!reclaimedFeeder || reclaimedFeeder.length === 0) {
+        throw new Error("Failed to reclaim orphaned feeder");
+      }
+
+      revalidatePath("/dashboard");
+      return reclaimedFeeder[0];
+    }
+  } catch (error) {
+    console.error("Error checking for orphaned feeder:", error);
+    // Continue with normal creation if orphan check fails
   }
 
-  // Check if user already owns a feeder with this device_id
+  // Check if user already has a feeder with this device_id
   const { data: existingUserFeeder, error: userFeederError } = await supabase
     .from("feeders")
-    .select("*")
-    .eq("device_id", data.device_id)
+    .select("id")
     .eq("user_id", user.id)
+    .eq("device_id", data.device_id)
     .single();
 
   if (userFeederError && userFeederError.code !== "PGRST116") {
@@ -407,7 +404,7 @@ export async function createFeeder(data: CreateFeederData): Promise<Feeder> {
     description: data.description,
     location: data.location,
     timezone: data.timezone ?? "Australia/Sydney",
-    is_active: data.is_active ?? true,
+    is_active: true, // Always set to active by default
     settings: data.settings ?? {},
   };
 
@@ -440,9 +437,25 @@ export async function updateFeeder(
     redirect("/auth/login");
   }
 
+  // Only update the fields that are allowed to be modified
+  // is_active is no longer user-controllable - it's determined by sensor data
+  const updateData = {
+    name: data.name,
+    description: data.description,
+    location: data.location,
+    timezone: data.timezone,
+    settings: data.settings,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Remove undefined fields
+  const cleanedData = Object.fromEntries(
+    Object.entries(updateData).filter(([, value]) => value !== undefined)
+  );
+
   const { data: feeder, error } = await supabase
     .from("feeders")
-    .update(data)
+    .update(cleanedData)
     .eq("id", id)
     .eq("user_id", user.id)
     .select()
@@ -454,7 +467,7 @@ export async function updateFeeder(
   }
 
   revalidatePath("/dashboard");
-  revalidatePath(`/dashboard/feeder/${id}`);
+  revalidatePath(`/dashboard/feeder/${feeder.device_id}`);
   return feeder;
 }
 
