@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
-import { Clock, ArrowRight, Settings } from "lucide-react";
+import { Clock, Settings } from "lucide-react";
 import Link from "next/link";
 import { FeederForm } from "./feeder/[id]/feeder-form";
 import {
@@ -74,11 +74,6 @@ async function OptimizedFeedersList() {
                     {feeder.description}
                   </div>
                 )}
-
-                <div className="mt-4 flex items-center justify-end text-blue-600">
-                  <span className="text-sm font-medium">View Details</span>
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                </div>
               </div>
             </div>
           </Card>
@@ -168,12 +163,6 @@ export default async function DashboardPage() {
                           {feeder.description}
                         </div>
                       )}
-                      <div className="mt-4 flex items-center justify-end text-blue-600">
-                        <span className="text-sm font-medium">
-                          View Details
-                        </span>
-                        <ArrowRight className="ml-1 h-4 w-4" />
-                      </div>
                     </div>
                   </div>
                 </Card>
