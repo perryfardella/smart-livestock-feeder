@@ -3,7 +3,6 @@
 import { Card } from "@/components/ui/card";
 import {
   Activity,
-  Clock,
   Settings,
   ArrowLeft,
   Camera,
@@ -265,19 +264,7 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
         </div>
 
         {/* Status Cards */}
-        <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <Settings className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-sm text-gray-600">Device ID</p>
-                <p className="text-lg font-semibold font-mono">
-                  {feeder.device_id}
-                </p>
-              </div>
-            </div>
-          </Card>
-
+        <div className="mb-8 max-w-sm">
           <Card className="p-6">
             <div className="flex items-center gap-4">
               <Globe className="h-8 w-8 text-purple-500" />
@@ -294,18 +281,6 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
                     minute: "2-digit",
                     hour12: true,
                   })}
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <Clock className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-sm text-gray-600">Created</p>
-                <p className="text-lg font-semibold">
-                  {format(new Date(feeder.created_at), "MMM d, yyyy")}
                 </p>
               </div>
             </div>
