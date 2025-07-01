@@ -1,2 +1,1 @@
 - Need performance optimisations for feeder page
-- Need husky to make sure all tests pass before I git commit

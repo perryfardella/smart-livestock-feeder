@@ -13,7 +13,8 @@
     "infra:deploy": "cd infrastructure && pnpm run deploy",
     "infra:destroy": "cd infrastructure && pnpm run destroy",
     "infra:bootstrap": "cd infrastructure && pnpm run bootstrap",
-    "infra:diff": "cd infrastructure && pnpm run diff"
+    "infra:diff": "cd infrastructure && pnpm run diff",
+    "prepare": "husky"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity": "^3.817.0",
@@ -57,6 +58,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
+    "husky": "^9.1.7",
     "jest": "^30.0.2",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.0",
