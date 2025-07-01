@@ -1,15 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import {
-  Activity,
-  Settings,
-  ArrowLeft,
-  Camera,
-  Utensils,
-  RefreshCw,
-  Globe,
-} from "lucide-react";
+import { ArrowLeft, Camera, Utensils, RefreshCw, Globe } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -396,36 +388,6 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
 
           {/* Feeding Schedule */}
           <FeedingScheduleSection feederId={feeder.id} />
-
-          {/* Activity Log */}
-          <Card className="p-6">
-            <h2 className="mb-4 text-xl font-semibold">Recent Activity</h2>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4">
-                <Activity className="h-5 w-5 text-blue-500 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium">Feeder created</p>
-                  <p className="text-xs text-gray-600">
-                    {format(new Date(feeder.created_at), "MMM d, yyyy h:mm a")}
-                  </p>
-                </div>
-              </div>
-              {feeder.updated_at !== feeder.created_at && (
-                <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4">
-                  <Settings className="h-5 w-5 text-orange-500 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Feeder updated</p>
-                    <p className="text-xs text-gray-600">
-                      {format(
-                        new Date(feeder.updated_at),
-                        "MMM d, yyyy h:mm a"
-                      )}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </Card>
         </div>
 
         {/* Sensor Data Section */}
