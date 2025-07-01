@@ -8,8 +8,6 @@ import {
   ArrowLeft,
   Camera,
   Utensils,
-  Wifi,
-  WifiOff,
   RefreshCw,
   Globe,
 } from "lucide-react";
@@ -22,6 +20,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -42,11 +45,11 @@ import { FeedingScheduleSection } from "./feeding-schedule";
 export function FeederUI({ feeder }: { feeder: Feeder }) {
   const [connectionStatus, setConnectionStatus] =
     useState<FeederConnectionStatus | null>(null);
-  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [feedDialogOpen, setFeedDialogOpen] = useState(false);
   const [feedAmount, setFeedAmount] = useState("");
   const [isReleasingFeed, setIsReleasingFeed] = useState(false);
+  const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
 
   // Check connection status on component mount and periodically
   useEffect(() => {
@@ -56,8 +59,6 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
         setConnectionStatus(status);
       } catch (error) {
         console.error("Error checking connection status:", error);
-      } finally {
-        setIsCheckingConnection(false);
       }
     };
 
@@ -264,7 +265,7 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
         </div>
 
         {/* Status Cards */}
-        <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <Card className="p-6">
             <div className="flex items-center gap-4">
               <Settings className="h-8 w-8 text-blue-500" />
@@ -273,43 +274,6 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
                 <p className="text-lg font-semibold font-mono">
                   {feeder.device_id}
                 </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              {isCheckingConnection ? (
-                <RefreshCw className="h-8 w-8 text-gray-400 animate-spin" />
-              ) : feederStatus?.status === "online" ? (
-                <Wifi className="h-8 w-8 text-green-500" />
-              ) : (
-                <WifiOff className="h-8 w-8 text-red-500" />
-              )}
-              <div>
-                <p className="text-sm text-gray-600">Status</p>
-                <p
-                  className={`text-lg font-semibold ${
-                    isCheckingConnection
-                      ? "text-gray-600"
-                      : feederStatus?.status === "online"
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {isCheckingConnection
-                    ? "Checking..."
-                    : feederStatus?.displayText || "Offline"}
-                </p>
-                {feederStatus?.lastCommunication && (
-                  <p className="text-xs text-gray-500">
-                    Last communication:{" "}
-                    {format(
-                      new Date(feederStatus.lastCommunication),
-                      "MMM d, yyyy h:mm a"
-                    )}
-                  </p>
-                )}
               </div>
             </div>
           </Card>
@@ -367,10 +331,49 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
                   </span>
                   <div>
                     {feederStatus ? (
-                      <ConnectionStatus
-                        status={feederStatus.status}
-                        size="sm"
-                      />
+                      <Popover
+                        open={statusPopoverOpen}
+                        onOpenChange={setStatusPopoverOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <div
+                            className="inline-block cursor-help"
+                            onMouseEnter={() => setStatusPopoverOpen(true)}
+                            onMouseLeave={() => setStatusPopoverOpen(false)}
+                          >
+                            <ConnectionStatus
+                              status={feederStatus.status}
+                              size="sm"
+                            />
+                          </div>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-auto p-3"
+                          side="top"
+                          onMouseEnter={() => setStatusPopoverOpen(true)}
+                          onMouseLeave={() => setStatusPopoverOpen(false)}
+                        >
+                          <div className="text-sm">
+                            {feederStatus.lastCommunication ? (
+                              <>
+                                <p className="font-medium">
+                                  Last Communication
+                                </p>
+                                <p className="text-gray-600">
+                                  {format(
+                                    new Date(feederStatus.lastCommunication),
+                                    "MMM d, yyyy 'at' h:mm a"
+                                  )}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-gray-600">
+                                No recent communication
+                              </p>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     ) : (
                       <span className="text-sm text-gray-600">Checking...</span>
                     )}
