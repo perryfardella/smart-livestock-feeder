@@ -4,13 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { SensorChart } from "./sensor-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Clock, Database } from "lucide-react";
+import { Clock, Database } from "lucide-react";
 import {
   getAllSensorDataOptimized,
   type SensorDataSummary,
 } from "@/lib/actions/sensor-data";
 import { format } from "date-fns";
-import { toast } from "sonner";
 
 interface SensorDashboardProps {
   deviceId: string;
@@ -21,6 +20,9 @@ interface SensorChartData {
   sensorType: string;
   data: { timestamp: string; value: number }[];
 }
+
+// Time period types with better naming
+type TimePeriod = "daily" | "weekly" | "monthly" | "all-time";
 
 // Predefined colors for different sensor types
 const SENSOR_COLORS = [
@@ -55,6 +57,17 @@ const SENSOR_UNITS: Record<string, string> = {
   tds: "ppm",
 };
 
+// Time period configuration
+const TIME_PERIOD_CONFIG: Record<
+  TimePeriod,
+  { label: string; hours?: number; days?: number; limit: number }
+> = {
+  daily: { label: "Daily", hours: 24, limit: 200 },
+  weekly: { label: "Weekly", days: 7, limit: 300 },
+  monthly: { label: "Monthly", days: 30, limit: 500 },
+  "all-time": { label: "All Time", limit: 1000 },
+};
+
 export function SensorDashboard({
   deviceId,
   feederName,
@@ -62,22 +75,15 @@ export function SensorDashboard({
   const [sensorSummary, setSensorSummary] = useState<SensorDataSummary[]>([]);
   const [chartData, setChartData] = useState<SensorChartData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [timeRange, setTimeRange] = useState<"1h" | "6h" | "24h" | "7d">("24h");
+  const [timeRange, setTimeRange] = useState<TimePeriod>("weekly"); // Default to weekly
 
-  const getTimeRangeOptions = (range: string) => {
-    switch (range) {
-      case "1h":
-        return { hours: 1, limit: 60 };
-      case "6h":
-        return { hours: 6, limit: 120 };
-      case "24h":
-        return { hours: 24, limit: 200 };
-      case "7d":
-        return { days: 7, limit: 300 };
-      default:
-        return { hours: 24, limit: 200 };
-    }
+  const getTimeRangeOptions = (range: TimePeriod) => {
+    const config = TIME_PERIOD_CONFIG[range];
+    return {
+      hours: config.hours,
+      days: config.days,
+      limit: config.limit,
+    };
   };
 
   const getSensorUnit = (sensorType: string): string => {
@@ -93,41 +99,52 @@ export function SensorDashboard({
     return "";
   };
 
-  const loadSensorData = useCallback(
-    async (showRefreshLoader = false) => {
-      if (showRefreshLoader) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+  const loadSensorData = useCallback(async () => {
+    setLoading(true);
 
-      try {
-        const timeRangeOptions = getTimeRangeOptions(timeRange);
+    try {
+      const timeRangeOptions = getTimeRangeOptions(timeRange);
 
-        // Use the optimized function to get all data in one request
-        const { summary, chartData } = await getAllSensorDataOptimized(
-          deviceId,
-          timeRangeOptions
-        );
+      // Use the optimized function to get all data in one request
+      const { summary, chartData } = await getAllSensorDataOptimized(
+        deviceId,
+        timeRangeOptions
+      );
 
-        setSensorSummary(summary);
-        setChartData(chartData);
-      } catch (error) {
-        console.error("Error loading sensor data:", error);
-        // Don't show toast error on initial load to avoid spamming users
-        if (showRefreshLoader) {
-          toast.error("Failed to refresh sensor data");
-        }
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [deviceId, timeRange]
-  );
+      setSensorSummary(summary);
+      setChartData(chartData);
+    } catch (error) {
+      console.error("Error loading sensor data:", error);
+      // Silently handle errors on automatic refresh to avoid spamming users
+    } finally {
+      setLoading(false);
+    }
+  }, [deviceId, timeRange]);
 
   useEffect(() => {
     loadSensorData();
+
+    // Set up automatic polling every 2 minutes for fresh sensor data
+    const interval = setInterval(() => {
+      // Only update if the page is visible to avoid unnecessary requests
+      if (!document.hidden) {
+        loadSensorData();
+      }
+    }, 120000); // 2 minutes = 120,000ms
+
+    // Also refresh when the page becomes visible again
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadSensorData();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [loadSensorData]);
 
   const formatSensorType = (type: string) => {
@@ -163,29 +180,41 @@ export function SensorDashboard({
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <span>Sensor Data - {feederName}</span>
-              <Button
-                onClick={() => loadSensorData(true)}
-                size="sm"
-                variant="outline"
-                disabled={refreshing}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
-                />
-                Refresh
-              </Button>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                {/* Time range selector - available even when no data */}
+                <div className="flex flex-wrap gap-1 border rounded-lg p-1">
+                  {(Object.keys(TIME_PERIOD_CONFIG) as TimePeriod[]).map(
+                    (range) => (
+                      <Button
+                        key={range}
+                        onClick={() => setTimeRange(range)}
+                        size="sm"
+                        variant={timeRange === range ? "default" : "ghost"}
+                        className="rounded-md text-xs"
+                      >
+                        {TIME_PERIOD_CONFIG[range].label}
+                      </Button>
+                    )
+                  )}
+                </div>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center py-12">
               <Database className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-semibold text-gray-900">
-                No sensor data
+                No sensor data found
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                No sensor readings found for device ID: {deviceId}
+                No sensor readings found for device ID: {deviceId} in the{" "}
+                {TIME_PERIOD_CONFIG[timeRange].label.toLowerCase()} time period
+              </p>
+              <p className="mt-2 text-xs text-gray-400">
+                Try the &quot;All Time&quot; option above to check if any data
+                exists
               </p>
             </div>
           </CardContent>
@@ -199,34 +228,25 @@ export function SensorDashboard({
       {/* Header with controls */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <span>Sensor Data - {feederName}</span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
               {/* Time range selector */}
-              <div className="flex border rounded-lg overflow-hidden">
-                {(["1h", "6h", "24h", "7d"] as const).map((range) => (
-                  <Button
-                    key={range}
-                    onClick={() => setTimeRange(range)}
-                    size="sm"
-                    variant={timeRange === range ? "default" : "ghost"}
-                    className="rounded-none border-0"
-                  >
-                    {range}
-                  </Button>
-                ))}
+              <div className="flex flex-wrap gap-1 border rounded-lg p-1">
+                {(Object.keys(TIME_PERIOD_CONFIG) as TimePeriod[]).map(
+                  (range) => (
+                    <Button
+                      key={range}
+                      onClick={() => setTimeRange(range)}
+                      size="sm"
+                      variant={timeRange === range ? "default" : "ghost"}
+                      className="rounded-md text-xs"
+                    >
+                      {TIME_PERIOD_CONFIG[range].label}
+                    </Button>
+                  )
+                )}
               </div>
-              <Button
-                onClick={() => loadSensorData(true)}
-                size="sm"
-                variant="outline"
-                disabled={refreshing}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
-                />
-                Refresh
-              </Button>
             </div>
           </CardTitle>
         </CardHeader>
