@@ -11,6 +11,7 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
+  Globe,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -315,22 +316,32 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
 
           <Card className="p-6">
             <div className="flex items-center gap-4">
+              <Globe className="h-8 w-8 text-purple-500" />
+              <div>
+                <p className="text-sm text-gray-600">Timezone</p>
+                <p className="text-lg font-semibold">
+                  {feeder.timezone.replace("_", " ")}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Current time:{" "}
+                  {new Date().toLocaleTimeString("en-AU", {
+                    timeZone: feeder.timezone,
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center gap-4">
               <Clock className="h-8 w-8 text-blue-500" />
               <div>
                 <p className="text-sm text-gray-600">Created</p>
                 <p className="text-lg font-semibold">
                   {format(new Date(feeder.created_at), "MMM d, yyyy")}
-                </p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <Clock className="h-8 w-8 text-orange-500" />
-              <div>
-                <p className="text-sm text-gray-600">Last Updated</p>
-                <p className="text-lg font-semibold">
-                  {format(new Date(feeder.updated_at), "MMM d, yyyy")}
                 </p>
               </div>
             </div>
@@ -355,6 +366,12 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
                 <span className="text-sm text-gray-600">Location:</span>
                 <span className="font-medium">
                   {feeder.location || "Not set"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Timezone:</span>
+                <span className="font-medium">
+                  {feeder.timezone.replace("_", " ")}
                 </span>
               </div>
               <div className="flex justify-between items-center">

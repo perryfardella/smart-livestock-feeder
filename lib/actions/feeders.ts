@@ -17,6 +17,7 @@ export interface Feeder {
   name: string;
   description?: string;
   location?: string;
+  timezone: string;
   is_active: boolean;
   settings: Record<string, unknown>;
   created_at: string;
@@ -28,6 +29,7 @@ export interface CreateFeederData {
   name: string;
   description?: string;
   location?: string;
+  timezone?: string;
   is_active?: boolean;
   settings?: Record<string, unknown>;
 }
@@ -36,6 +38,7 @@ export interface UpdateFeederData {
   name?: string;
   description?: string;
   location?: string;
+  timezone?: string;
   is_active?: boolean;
   settings?: Record<string, unknown>;
 }
@@ -213,6 +216,7 @@ export async function createFeeder(data: CreateFeederData): Promise<Feeder> {
     name: data.name,
     description: data.description,
     location: data.location,
+    timezone: data.timezone ?? "Australia/Sydney",
     is_active: data.is_active ?? true,
     settings: data.settings ?? {},
   };

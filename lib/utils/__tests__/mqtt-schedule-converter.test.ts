@@ -18,7 +18,7 @@ describe("convertSchedulesToMQTT", () => {
         },
       ];
 
-      const result = convertSchedulesToMQTT(schedules);
+      const result = convertSchedulesToMQTT(schedules, "UTC");
 
       expect(result.schedule).toHaveLength(1);
       expect(result.schedule[0]).toEqual([
@@ -45,7 +45,7 @@ describe("convertSchedulesToMQTT", () => {
         },
       ];
 
-      const result = convertSchedulesToMQTT(schedules);
+      const result = convertSchedulesToMQTT(schedules, "UTC");
 
       expect(result.schedule).toHaveLength(2);
       expect(result.schedule[0]).toEqual([
@@ -77,7 +77,7 @@ describe("convertSchedulesToMQTT", () => {
         },
       ];
 
-      const result = convertSchedulesToMQTT(schedules);
+      const result = convertSchedulesToMQTT(schedules, "UTC");
 
       expect(result.schedule).toHaveLength(1);
       expect(result.schedule[0]).toEqual([
@@ -101,7 +101,7 @@ describe("convertSchedulesToMQTT", () => {
         },
       ];
 
-      const result = convertSchedulesToMQTT(schedules);
+      const result = convertSchedulesToMQTT(schedules, "UTC");
 
       expect(result.schedule).toHaveLength(3);
       expect(result.schedule[0]).toEqual([
@@ -137,7 +137,7 @@ describe("convertSchedulesToMQTT", () => {
         },
       ];
 
-      const result = convertSchedulesToMQTT(schedules);
+      const result = convertSchedulesToMQTT(schedules, "UTC");
 
       expect(result.schedule).toHaveLength(2);
       expect(result.schedule[0]).toEqual([
@@ -167,7 +167,7 @@ describe("convertSchedulesToMQTT", () => {
         },
       ];
 
-      const result = convertSchedulesToMQTT(schedules);
+      const result = convertSchedulesToMQTT(schedules, "UTC");
 
       expect(result.schedule).toHaveLength(1);
       expect(result.schedule[0]).toEqual([
@@ -193,7 +193,7 @@ describe("convertSchedulesToMQTT", () => {
         },
       ];
 
-      const result = convertSchedulesToMQTT(schedules);
+      const result = convertSchedulesToMQTT(schedules, "UTC");
 
       expect(result.schedule).toHaveLength(2);
       expect(result.schedule[0]).toEqual([
@@ -225,7 +225,7 @@ describe("convertSchedulesToMQTT", () => {
         },
       ];
 
-      const result = convertSchedulesToMQTT(schedules);
+      const result = convertSchedulesToMQTT(schedules, "UTC");
 
       expect(result.schedule).toHaveLength(2);
       expect(result.schedule[0]).toEqual([
@@ -266,7 +266,7 @@ describe("convertSchedulesToMQTT", () => {
         },
       ];
 
-      const result = convertSchedulesToMQTT(schedules);
+      const result = convertSchedulesToMQTT(schedules, "UTC");
 
       expect(result.schedule).toHaveLength(2);
       expect(result.schedule[0]).toEqual([
@@ -301,7 +301,7 @@ describe("convertSchedulesToMQTT", () => {
         },
       ];
 
-      const result = convertSchedulesToMQTT(schedules);
+      const result = convertSchedulesToMQTT(schedules, "UTC");
 
       expect(result.schedule).toHaveLength(4); // 2 days × 2 sessions
 
@@ -335,7 +335,7 @@ describe("convertSchedulesToMQTT", () => {
     });
 
     test("empty schedules array", () => {
-      const result = convertSchedulesToMQTT([]);
+      const result = convertSchedulesToMQTT([], "UTC");
       expect(result.schedule).toEqual([]);
     });
 
@@ -352,9 +352,59 @@ describe("convertSchedulesToMQTT", () => {
         },
       ];
 
-      const result = convertSchedulesToMQTT(schedules);
+      const result = convertSchedulesToMQTT(schedules, "UTC");
 
       expect(result.schedule[0][3]).toBe(2.75);
     });
+  });
+});
+
+describe("Timezone functionality", () => {
+  test("converts schedules with Australia/Sydney timezone", () => {
+    const schedules: FeedingSchedule[] = [
+      {
+        id: "1",
+        feederId: "feeder-123",
+        startDate: new Date("2025-01-21T08:00:00Z"), // UTC time
+        endDate: undefined,
+        interval: "daily",
+        daysOfWeek: [],
+        sessions: [{ id: "s1", time: "08:00", feedAmount: 2.0 }],
+      },
+    ];
+
+    const result = convertSchedulesToMQTT(schedules, "Australia/Sydney");
+
+    expect(result.schedule).toHaveLength(1);
+    // The exact timestamp will depend on whether it's DST or not in Sydney
+    // But it should be a valid number and different from UTC
+    expect(typeof result.schedule[0][0]).toBe("number");
+    expect(result.schedule[0][2]).toBe(86400); // daily interval
+    expect(result.schedule[0][3]).toBe(2.0); // feed amount
+  });
+
+  test("handles UTC timezone correctly", () => {
+    const schedules: FeedingSchedule[] = [
+      {
+        id: "1",
+        feederId: "feeder-123",
+        startDate: new Date("2025-01-21T10:00:00Z"),
+        endDate: undefined,
+        interval: "daily",
+        daysOfWeek: [],
+        sessions: [{ id: "s1", time: "10:00", feedAmount: 1.5 }],
+      },
+    ];
+
+    const resultUTC = convertSchedulesToMQTT(schedules, "UTC");
+    const resultDefault = convertSchedulesToMQTT(schedules); // Should default to UTC
+
+    expect(resultUTC).toEqual(resultDefault);
+    expect(resultUTC.schedule[0]).toEqual([
+      1737453600, // 2025-01-21T10:00:00Z
+      null,
+      86400,
+      1.5,
+    ]);
   });
 });

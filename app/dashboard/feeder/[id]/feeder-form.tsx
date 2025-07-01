@@ -11,10 +11,37 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Pencil } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createFeeder, updateFeeder, type Feeder } from "@/lib/actions/feeders";
+
+// Popular timezones, with Australian timezones prioritized for the target audience
+const TIMEZONES = [
+  // Australian timezones (primary target market)
+  { value: "Australia/Sydney", label: "Australia/Sydney (AEDT/AEST)" },
+  { value: "Australia/Melbourne", label: "Australia/Melbourne (AEDT/AEST)" },
+  { value: "Australia/Brisbane", label: "Australia/Brisbane (AEST)" },
+  { value: "Australia/Perth", label: "Australia/Perth (AWST)" },
+  { value: "Australia/Adelaide", label: "Australia/Adelaide (ACDT/ACST)" },
+  { value: "Australia/Darwin", label: "Australia/Darwin (ACST)" },
+  { value: "Australia/Hobart", label: "Australia/Hobart (AEDT/AEST)" },
+
+  // Other common timezones
+  { value: "UTC", label: "UTC (Coordinated Universal Time)" },
+  { value: "America/New_York", label: "America/New_York (EST/EDT)" },
+  { value: "America/Los_Angeles", label: "America/Los_Angeles (PST/PDT)" },
+  { value: "Europe/London", label: "Europe/London (GMT/BST)" },
+  { value: "Asia/Tokyo", label: "Asia/Tokyo (JST)" },
+  { value: "Asia/Shanghai", label: "Asia/Shanghai (CST)" },
+];
 
 interface FeederFormProps {
   mode: "create" | "edit";
@@ -31,6 +58,9 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
   const [name, setName] = useState(feeder?.name || "");
   const [location, setLocation] = useState(feeder?.location || "");
   const [description, setDescription] = useState(feeder?.description || "");
+  const [timezone, setTimezone] = useState(
+    feeder?.timezone || "Australia/Sydney"
+  );
   const [isActive, setIsActive] = useState(feeder?.is_active ?? true);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -46,6 +76,11 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
       return;
     }
 
+    if (!timezone) {
+      toast.error("Please select a timezone");
+      return;
+    }
+
     startTransition(async () => {
       try {
         if (mode === "create") {
@@ -54,6 +89,7 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
             name,
             location,
             description,
+            timezone,
             is_active: isActive,
           });
           toast.success("Feeder created successfully!");
@@ -62,6 +98,7 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
             name,
             location,
             description,
+            timezone,
             is_active: isActive,
           });
           toast.success("Feeder updated successfully!");
@@ -74,6 +111,7 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
           setName("");
           setLocation("");
           setDescription("");
+          setTimezone("Australia/Sydney");
           setIsActive(true);
         }
         onSuccess?.();
@@ -142,6 +180,22 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Enter feeder location (optional)"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="timezone">Timezone</Label>
+            <Select value={timezone} onValueChange={setTimezone} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Select timezone" />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEZONES.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

@@ -47,10 +47,10 @@ async function convertAndLogMQTTSchedules(
       return;
     }
 
-    // First, get the feeder's device_id
+    // First, get the feeder's device_id and timezone
     const { data: feeder, error: feederError } = await supabase
       .from("feeders")
-      .select("device_id")
+      .select("device_id, timezone")
       .eq("id", feederId)
       .eq("user_id", user.id)
       .single();
@@ -107,7 +107,10 @@ async function convertAndLogMQTTSchedules(
           ) || [],
       })) || [];
 
-    const mqttMessage = convertSchedulesToMQTT(transformedSchedules);
+    const mqttMessage = convertSchedulesToMQTT(
+      transformedSchedules,
+      feeder.timezone || "UTC"
+    );
     const topic = `${feeder.device_id}/writeDataRequest`;
 
     console.log(

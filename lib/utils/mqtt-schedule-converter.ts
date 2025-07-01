@@ -21,9 +21,12 @@ const INTERVAL_SECONDS = {
 /**
  * Converts feeding schedules to MQTT format expected by Node-RED
  * Each session becomes a separate MQTT entry with calculated start/end dates
+ * @param schedules Array of feeding schedules to convert
+ * @param timezone IANA timezone identifier (e.g., 'Australia/Sydney')
  */
 export function convertSchedulesToMQTT(
-  schedules: FeedingSchedule[]
+  schedules: FeedingSchedule[],
+  timezone: string = "UTC"
 ): MQTTScheduleMessage {
   const mqttEntries: MQTTScheduleEntry[] = [];
 
@@ -33,16 +36,14 @@ export function convertSchedulesToMQTT(
     if (schedule.interval === "daily") {
       // For daily schedules, each session starts at the schedule start date/time
       for (const session of schedule.sessions) {
-        const startDate = new Date(schedule.startDate);
-        const [hours, minutes] = session.time.split(":");
-        startDate.setUTCHours(parseInt(hours), parseInt(minutes), 0, 0);
+        const startDate = createTimezoneAwareDate(
+          schedule.startDate,
+          session.time,
+          timezone
+        );
 
         const endDate = schedule.endDate
-          ? (() => {
-              const endDateTime = new Date(schedule.endDate);
-              endDateTime.setUTCHours(parseInt(hours), parseInt(minutes), 0, 0);
-              return endDateTime;
-            })()
+          ? createTimezoneAwareDate(schedule.endDate, session.time, timezone)
           : null;
 
         mqttEntries.push([
@@ -60,21 +61,12 @@ export function convertSchedulesToMQTT(
           const startDate = findNextDayOfWeek(
             schedule.startDate,
             dayOfWeek,
-            session.time
+            session.time,
+            timezone
           );
 
           const endDate = schedule.endDate
-            ? (() => {
-                const [hours, minutes] = session.time.split(":");
-                const endDateTime = new Date(schedule.endDate);
-                endDateTime.setUTCHours(
-                  parseInt(hours),
-                  parseInt(minutes),
-                  0,
-                  0
-                );
-                return endDateTime;
-              })()
+            ? createTimezoneAwareDate(schedule.endDate, session.time, timezone)
             : null;
 
           mqttEntries.push([
@@ -92,31 +84,77 @@ export function convertSchedulesToMQTT(
 }
 
 /**
+ * Creates a timezone-aware date from a base date and time string
+ */
+function createTimezoneAwareDate(
+  baseDate: Date,
+  timeString: string,
+  timezone: string
+): Date {
+  const [hours, minutes] = timeString.split(":");
+
+  // For UTC timezone, use simple approach
+  if (timezone === "UTC") {
+    const result = new Date(baseDate);
+    result.setUTCHours(parseInt(hours), parseInt(minutes), 0, 0);
+    return result;
+  }
+
+  // For other timezones, create a date in the target timezone
+  // Get just the date part (YYYY-MM-DD) from the base date
+  const dateStr = baseDate.toISOString().split("T")[0];
+
+  // Create a time string in the target timezone
+  const timeStr = `${dateStr}T${timeString}:00`;
+
+  // Parse this as a local time, then convert to UTC considering the timezone
+  const localDate = new Date(timeStr);
+
+  // Get what this time would be in the target timezone
+  const targetTime = new Date(
+    localDate.toLocaleString("en-US", { timeZone: timezone })
+  );
+  const utcTime = new Date(
+    localDate.toLocaleString("en-US", { timeZone: "UTC" })
+  );
+
+  // Calculate the offset and apply it
+  const offset = utcTime.getTime() - targetTime.getTime();
+  return new Date(localDate.getTime() + offset);
+}
+
+/**
  * Finds the next occurrence of a specific day of week >= the given start date
  */
 function findNextDayOfWeek(
   startDate: Date,
   targetDayOfWeek: number,
-  sessionTime: string
+  sessionTime: string,
+  timezone: string
 ): Date {
-  const [hours, minutes] = sessionTime.split(":");
-  const result = new Date(startDate);
-  result.setUTCHours(parseInt(hours), parseInt(minutes), 0, 0);
+  const result = createTimezoneAwareDate(startDate, sessionTime, timezone);
 
-  const currentDayOfWeek = result.getUTCDay();
+  // Get the day of week in the target timezone
+  const tempDate = new Date(
+    result.toLocaleString("en-US", { timeZone: timezone })
+  );
+  const currentDayOfWeek = tempDate.getDay();
   const daysToAdd = (targetDayOfWeek - currentDayOfWeek + 7) % 7;
 
   // If it's the same day of week, check if we're past the session time
   if (daysToAdd === 0) {
-    const startDateTime = new Date(startDate);
-    startDateTime.setUTCHours(parseInt(hours), parseInt(minutes), 0, 0);
+    const startDateTime = createTimezoneAwareDate(
+      startDate,
+      sessionTime,
+      timezone
+    );
 
     // If the session time is before the start time on the same day, move to next week
     if (startDateTime.getTime() < startDate.getTime()) {
-      result.setUTCDate(result.getUTCDate() + 7);
+      result.setDate(result.getDate() + 7);
     }
   } else {
-    result.setUTCDate(result.getUTCDate() + daysToAdd);
+    result.setDate(result.getDate() + daysToAdd);
   }
 
   return result;
