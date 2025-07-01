@@ -41,5 +41,6 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 This project uses Husky for git hooks to ensure code quality:
 
-- **Pre-commit hooks**: Automatically runs tests and linting before each commit
-- All tests must pass and code must be lint-free before commits are allowed
+- **Pre-commit hooks**: Automatically runs tests, linting, and build verification before each commit
+- All tests must pass, code must be lint-free, and project must build successfully before commits are allowed
+- This prevents failed Vercel deployments by catching build issues early
