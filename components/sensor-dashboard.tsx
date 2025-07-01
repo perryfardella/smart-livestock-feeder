@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Database } from "lucide-react";
 import {
-  getAllSensorDataOptimized,
+  getAllSensorDataUnfiltered,
   type SensorDataSummary,
 } from "@/lib/actions/sensor-data";
 import { format } from "date-fns";
@@ -19,6 +19,13 @@ interface SensorDashboardProps {
 interface SensorChartData {
   sensorType: string;
   data: { timestamp: string; value: number }[];
+}
+
+// Raw sensor data interface for caching
+interface RawSensorData {
+  sensor_type: string;
+  sensor_value: number;
+  timestamp: string;
 }
 
 // Time period types with better naming
@@ -68,23 +75,104 @@ const TIME_PERIOD_CONFIG: Record<
   "all-time": { label: "All Time", limit: 1000 },
 };
 
+// Client-side filtering functions
+const filterDataByTimeRange = (
+  data: RawSensorData[],
+  timeRange: TimePeriod
+): RawSensorData[] => {
+  if (timeRange === "all-time") {
+    return data;
+  }
+
+  const config = TIME_PERIOD_CONFIG[timeRange];
+  const now = Date.now();
+  let cutoffTime: number;
+
+  if (config.hours) {
+    cutoffTime = now - config.hours * 60 * 60 * 1000;
+  } else if (config.days) {
+    cutoffTime = now - config.days * 24 * 60 * 60 * 1000;
+  } else {
+    return data;
+  }
+
+  return data.filter(
+    (reading) => new Date(reading.timestamp).getTime() >= cutoffTime
+  );
+};
+
+const processFilteredData = (
+  filteredData: RawSensorData[],
+  timeRange: TimePeriod
+): {
+  summary: SensorDataSummary[];
+  chartData: SensorChartData[];
+} => {
+  if (filteredData.length === 0) {
+    return { summary: [], chartData: [] };
+  }
+
+  // Group by sensor type
+  const sensorGroups = filteredData.reduce((acc, reading) => {
+    if (!acc[reading.sensor_type]) {
+      acc[reading.sensor_type] = [];
+    }
+    acc[reading.sensor_type].push(reading);
+    return acc;
+  }, {} as Record<string, RawSensorData[]>);
+
+  // Create summary
+  const summary: SensorDataSummary[] = Object.entries(sensorGroups).map(
+    ([sensorType, readings]) => {
+      const sortedReadings = readings.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      const latest = sortedReadings[0];
+
+      return {
+        sensor_type: sensorType,
+        latest_value: latest.sensor_value,
+        latest_timestamp: latest.timestamp,
+        readings_count: readings.length,
+      };
+    }
+  );
+
+  // Create chart data (limit per sensor type)
+  const limit = TIME_PERIOD_CONFIG[timeRange].limit;
+  const chartData = Object.entries(sensorGroups).map(
+    ([sensorType, readings]) => {
+      const sortedReadings = readings
+        .sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        )
+        .slice(0, limit);
+
+      return {
+        sensorType,
+        data: sortedReadings.map((item) => ({
+          timestamp: item.timestamp,
+          value: item.sensor_value,
+        })),
+      };
+    }
+  );
+
+  return { summary, chartData };
+};
+
 export function SensorDashboard({
   deviceId,
   feederName,
 }: SensorDashboardProps) {
+  // Cached raw data from database
+  const [rawSensorData, setRawSensorData] = useState<RawSensorData[]>([]);
   const [sensorSummary, setSensorSummary] = useState<SensorDataSummary[]>([]);
   const [chartData, setChartData] = useState<SensorChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<TimePeriod>("all-time"); // Default to all-time
-
-  const getTimeRangeOptions = (range: TimePeriod) => {
-    const config = TIME_PERIOD_CONFIG[range];
-    return {
-      hours: config.hours,
-      days: config.days,
-      limit: config.limit,
-    };
-  };
 
   const getSensorUnit = (sensorType: string): string => {
     const lowerType = sensorType.toLowerCase();
@@ -99,43 +187,50 @@ export function SensorDashboard({
     return "";
   };
 
-  const loadSensorData = useCallback(async () => {
+  // Load all sensor data once from database
+  const loadAllSensorData = useCallback(async () => {
     setLoading(true);
 
     try {
-      const timeRangeOptions = getTimeRangeOptions(timeRange);
-
-      // Use the optimized function to get all data in one request
-      const { summary, chartData } = await getAllSensorDataOptimized(
-        deviceId,
-        timeRangeOptions
-      );
-
-      setSensorSummary(summary);
-      setChartData(chartData);
+      const data = await getAllSensorDataUnfiltered(deviceId, 2000);
+      setRawSensorData(data);
     } catch (error) {
       console.error("Error loading sensor data:", error);
       // Silently handle errors on automatic refresh to avoid spamming users
     } finally {
       setLoading(false);
     }
-  }, [deviceId, timeRange]);
+  }, [deviceId]);
 
+  // Process cached data when timeRange changes (instant, no DB call)
   useEffect(() => {
-    loadSensorData();
+    if (rawSensorData.length > 0) {
+      const filteredData = filterDataByTimeRange(rawSensorData, timeRange);
+      const processed = processFilteredData(filteredData, timeRange);
+      setSensorSummary(processed.summary);
+      setChartData(processed.chartData);
+    } else {
+      setSensorSummary([]);
+      setChartData([]);
+    }
+  }, [rawSensorData, timeRange]);
+
+  // Load data on mount and set up periodic refresh
+  useEffect(() => {
+    loadAllSensorData();
 
     // Set up automatic polling every 2 minutes for fresh sensor data
     const interval = setInterval(() => {
       // Only update if the page is visible to avoid unnecessary requests
       if (!document.hidden) {
-        loadSensorData();
+        loadAllSensorData();
       }
     }, 120000); // 2 minutes = 120,000ms
 
     // Also refresh when the page becomes visible again
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        loadSensorData();
+        loadAllSensorData();
       }
     };
 
@@ -145,7 +240,7 @@ export function SensorDashboard({
       clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [loadSensorData]);
+  }, [loadAllSensorData]);
 
   const formatSensorType = (type: string) => {
     return (

@@ -315,3 +315,31 @@ export async function getAllSensorDataOptimized(
 
   return { summary, chartData };
 }
+
+export async function getAllSensorDataUnfiltered(
+  deviceId: string,
+  limit: number = 2000
+): Promise<
+  {
+    sensor_type: string;
+    sensor_value: number;
+    timestamp: string;
+  }[]
+> {
+  const supabase = await createClient();
+
+  // Get all sensor data without time filtering - we'll filter client-side
+  const { data, error } = await supabase
+    .from("sensor_data")
+    .select("sensor_type, sensor_value, timestamp")
+    .eq("device_id", deviceId)
+    .order("timestamp", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching all sensor data:", error);
+    throw new Error("Failed to fetch sensor data");
+  }
+
+  return data || [];
+}
