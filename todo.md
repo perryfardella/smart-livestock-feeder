@@ -1,0 +1,1 @@
+- Cleanup sensor data UX so it shows the time period where there is data so user doesn't have to test all options to find data.
