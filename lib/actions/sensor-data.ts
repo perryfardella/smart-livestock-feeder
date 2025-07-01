@@ -220,6 +220,54 @@ export async function getFeederConnectionStatus(
   };
 }
 
+// Optimized function to get connection status for multiple feeders at once
+export async function getBatchFeederConnectionStatus(
+  deviceIds: string[]
+): Promise<Map<string, FeederConnectionStatus>> {
+  if (deviceIds.length === 0) {
+    return new Map();
+  }
+
+  const supabase = await createClient();
+
+  // Get the latest sensor data for all devices in a single query
+  const { data, error } = await supabase
+    .from("sensor_data")
+    .select("device_id, timestamp")
+    .in("device_id", deviceIds)
+    .order("timestamp", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching batch connection status:", error);
+    // Return default offline status for all devices
+    const result = new Map<string, FeederConnectionStatus>();
+    deviceIds.forEach((deviceId) => {
+      result.set(deviceId, { isOnline: false, lastCommunication: null });
+    });
+    return result;
+  }
+
+  // Group by device_id and find the latest timestamp for each
+  const deviceLastComm = new Map<string, string>();
+
+  data?.forEach((reading) => {
+    const current = deviceLastComm.get(reading.device_id);
+    if (!current || new Date(reading.timestamp) > new Date(current)) {
+      deviceLastComm.set(reading.device_id, reading.timestamp);
+    }
+  });
+
+  // Create the result map with connection status for each device
+  const result = new Map<string, FeederConnectionStatus>();
+  deviceIds.forEach((deviceId) => {
+    const lastCommunication = deviceLastComm.get(deviceId) || null;
+    const isOnline = isFeederOnline(lastCommunication);
+    result.set(deviceId, { isOnline, lastCommunication });
+  });
+
+  return result;
+}
+
 export async function getAllSensorDataOptimized(
   deviceId: string,
   timeRange: TimeRangeOptions = { hours: 24, limit: 200 }

@@ -1,1 +1,2 @@
-- Cleanup sensor data UX so it shows the time period where there is data so user doesn't have to test all options to find data.
+- Need performance optimisations for feeder page
+- Need husky to make sure all tests pass before I git commit
