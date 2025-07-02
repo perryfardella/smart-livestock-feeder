@@ -1,41 +1,92 @@
-# Smart Livestock Feeder
+# SmartFeeder Web App
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+A Next.js application for managing smart livestock feeders with remote monitoring and control capabilities.
 
-## Getting Started
+## Tech Stack
 
-First, run the development server:
+- **Frontend:** Next.js, React, TypeScript, Tailwind CSS, Shadcn UI
+- **Backend:** Supabase (PostgreSQL database, Authentication)
+- **Package Manager:** pnpm
+- **Hosting:** Vercel
+- **Payments:** Stripe
+- **Analytics:** Vercel Analytics
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Admin Functionality
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The application includes an admin system for managing commissioned feeder devices:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Setting Up Admin Users
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+To grant admin privileges to a user:
 
-## Learn More
+1. **Via Supabase Dashboard:**
 
-To learn more about Next.js, take a look at the following resources:
+   - Go to Authentication → Users
+   - Find the user and edit their details
+   - Set `raw_app_meta_data` to: `{"is_admin": true}`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. **Via SQL:**
+   ```sql
+   UPDATE auth.users
+   SET raw_app_meta_data = '{"is_admin": true}'::jsonb
+   WHERE email = 'admin@example.com';
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Admin Features
 
-## Deploy on Vercel
+- **Commission Feeders:** Add device IDs that users can claim
+- **Manage Devices:** View, edit, and delete commissioned devices
+- **Bulk Operations:** Upload multiple device IDs at once
+- **Device Validation:** Only commissioned device IDs can be used by users
+- **Testing Mode:** Currently allows multiple users per device (disabled for production)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Device Validation Flow
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Admin commissions device IDs via admin panel
+2. Users can only create feeders with commissioned device IDs
+3. System validates device ID exists in commissioned feeders table
+4. (Production) Each device can only be assigned to one user
+
+## Development
+
+1. Install dependencies:
+
+   ```bash
+   pnpm install
+   ```
+
+2. Set up environment variables (see `.env.example`)
+
+3. Start Supabase:
+
+   ```bash
+   pnpm supabase start
+   ```
+
+4. Run database migrations:
+
+   ```bash
+   pnpm supabase db push
+   ```
+
+5. Start development server:
+   ```bash
+   pnpm dev
+   ```
+
+## Database Schema
+
+- `feeders` - User-owned feeder devices
+- `commissioned_feeders` - Admin-managed list of valid device IDs
+- `feeding_schedules` - Automated feeding schedules
+- `feeding_sessions` - Individual feeding times within schedules
+- `sensor_data` - IoT sensor readings
+
+## Security
+
+- Row Level Security (RLS) enabled on all tables
+- Admin access controlled via JWT `app_metadata.is_admin`
+- Device validation prevents unauthorized feeder creation
 
 ## Development Workflow
 

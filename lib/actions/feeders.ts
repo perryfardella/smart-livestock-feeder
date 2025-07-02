@@ -328,7 +328,14 @@ export async function getFeederByDeviceId(
   return data;
 }
 
-export async function createFeeder(data: CreateFeederData): Promise<Feeder> {
+// Result type for feeder creation
+export type CreateFeederResult =
+  | { success: true; data: Feeder }
+  | { success: false; error: string };
+
+export async function createFeeder(
+  data: CreateFeederData
+): Promise<CreateFeederResult> {
   const supabase = await createClient();
 
   const {
@@ -339,7 +346,26 @@ export async function createFeeder(data: CreateFeederData): Promise<Feeder> {
     redirect("/auth/login");
   }
 
-  // First check if an orphaned feeder with this device_id exists
+  // First check if the device ID is commissioned and available
+  const { data: isCommissioned, error: commissionError } = await supabase.rpc(
+    "is_device_commissioned",
+    { device_id_param: data.device_id }
+  );
+
+  if (commissionError) {
+    console.error("Error checking if device is commissioned:", commissionError);
+    return { success: false, error: "Failed to validate device ID" };
+  }
+
+  if (!isCommissioned) {
+    return {
+      success: false,
+      error:
+        "Device ID not found. This device must be commissioned by an administrator before it can be added. Please check your device ID or contact an administrator.",
+    };
+  }
+
+  // Check if an orphaned feeder with this device_id exists
   try {
     const { data: orphanedFeeder, error: findError } = await supabase.rpc(
       "find_orphaned_feeder",
@@ -364,15 +390,21 @@ export async function createFeeder(data: CreateFeederData): Promise<Feeder> {
 
       if (reclaimError) {
         console.error("Error reclaiming orphaned feeder:", reclaimError);
-        throw new Error("Failed to reclaim orphaned feeder");
+        return { success: false, error: "Failed to reclaim orphaned feeder" };
       }
 
       if (!reclaimedFeeder || reclaimedFeeder.length === 0) {
-        throw new Error("Failed to reclaim orphaned feeder");
+        return { success: false, error: "Failed to reclaim orphaned feeder" };
       }
 
+      // TODO: Before going live, uncomment this to track device assignments
+      // Mark device as assigned
+      // await supabase.rpc("mark_device_assigned", {
+      //   device_id_param: data.device_id,
+      // });
+
       revalidatePath("/dashboard");
-      return reclaimedFeeder[0];
+      return { success: true, data: reclaimedFeeder[0] };
     }
   } catch (error) {
     console.error("Error checking for orphaned feeder:", error);
@@ -389,11 +421,14 @@ export async function createFeeder(data: CreateFeederData): Promise<Feeder> {
 
   if (userFeederError && userFeederError.code !== "PGRST116") {
     console.error("Error checking for existing user feeder:", userFeederError);
-    throw new Error("Failed to check for existing feeder");
+    return { success: false, error: "Failed to check for existing feeder" };
   }
 
   if (existingUserFeeder) {
-    throw new Error("You already have a feeder with this device ID");
+    return {
+      success: false,
+      error: "You already have a feeder with this device ID",
+    };
   }
 
   // No existing feeder found, create a new one
@@ -416,11 +451,17 @@ export async function createFeeder(data: CreateFeederData): Promise<Feeder> {
 
   if (error) {
     console.error("Error creating feeder:", error);
-    throw new Error("Failed to create feeder");
+    return { success: false, error: "Failed to create feeder" };
   }
 
+  // TODO: Before going live, uncomment this to track device assignments
+  // Mark device as assigned in commissioned_feeders table
+  // await supabase.rpc("mark_device_assigned", {
+  //   device_id_param: data.device_id,
+  // });
+
   revalidatePath("/dashboard");
-  return feeder;
+  return { success: true, data: feeder };
 }
 
 export async function updateFeeder(
@@ -525,6 +566,12 @@ export async function deleteFeeder(id: string): Promise<void> {
     console.error("Error orphaning feeder:", error);
     throw new Error("Failed to remove feeder from your account");
   }
+
+  // TODO: Before going live, uncomment this to track device assignments
+  // Mark device as available in commissioned_feeders table
+  // await supabase.rpc("mark_device_available", {
+  //   device_id_param: feeder.device_id,
+  // });
 
   revalidatePath("/dashboard");
 }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 
 export function Header() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -16,6 +17,14 @@ export function Header() {
         data: { session },
       } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
+
+      // Check admin status if user is authenticated
+      if (session?.user) {
+        const isUserAdmin = session.user.app_metadata?.is_admin === true;
+        setIsAdmin(isUserAdmin);
+      } else {
+        setIsAdmin(false);
+      }
     };
 
     checkAuth();
@@ -24,6 +33,14 @@ export function Header() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session);
+
+      // Check admin status on auth state change
+      if (session?.user) {
+        const isUserAdmin = session.user.app_metadata?.is_admin === true;
+        setIsAdmin(isUserAdmin);
+      } else {
+        setIsAdmin(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -45,6 +62,14 @@ export function Header() {
                 >
                   Dashboard
                 </Link>
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className="text-sm font-medium hover:underline"
+                  >
+                    Admin
+                  </Link>
+                )}
                 <LogoutButton />
               </div>
             ) : (

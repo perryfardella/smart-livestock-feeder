@@ -83,13 +83,19 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
     startTransition(async () => {
       try {
         if (mode === "create") {
-          await createFeeder({
+          const result = await createFeeder({
             device_id: deviceId,
             name,
             location,
             description,
             timezone,
           });
+
+          if (!result.success) {
+            toast.error(result.error);
+            return;
+          }
+
           toast.success("Feeder created successfully!");
         } else if (feeder) {
           await updateFeeder(feeder.id, {
@@ -112,12 +118,16 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
         }
         onSuccess?.();
       } catch (error) {
-        toast.error(
-          mode === "create"
+        // This should only catch unexpected errors now
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : mode === "create"
             ? "Failed to create feeder"
-            : "Failed to update feeder"
-        );
-        console.error("Error:", error);
+            : "Failed to update feeder";
+
+        toast.error(errorMessage);
+        console.error("Unexpected error:", error);
       }
     });
   };
@@ -151,7 +161,7 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
                 id="deviceId"
                 value={deviceId}
                 onChange={(e) => setDeviceId(e.target.value)}
-                placeholder="Enter device ID"
+                placeholder="Enter device ID (e.g., SF001234)"
                 required
               />
             </div>
