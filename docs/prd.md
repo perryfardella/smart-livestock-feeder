@@ -8,7 +8,7 @@
 
 ## Overview
 
-The SmartFeeder Web App enables hobby farmers and property owners in Australia to remotely monitor and control animal feeders. It provides features like viewing live camera feeds (mocked initially), manually releasing feed, and setting automatic feeding schedules. The app aims to offer convenience and peace of mind for users managing livestock such as horses, cows, or chickens, particularly when they are away from their properties.
+The SmartFeeder Web App enables hobby farmers and property owners in Australia to remotely monitor and control animal feeders through real-time IoT integration. The platform provides comprehensive feeder management including live sensor data monitoring, automated feeding schedules, manual feed release via MQTT commands, and administrative device commissioning. The app offers convenience and peace of mind for users managing livestock such as horses, cows, or chickens, particularly when they are away from their properties.
 
 ---
 
@@ -19,20 +19,51 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 - **User satisfaction ratings:** Target 4+ stars on feedback surveys
 - **Retention rate of subscribers:** Target 80% retention after 3 months
 - **Reported reduction in manual feeding tasks:** Target 50% reduction based on user feedback
+- **IoT device connectivity rate:** Target 95% uptime for commissioned devices
+- **Admin efficiency:** Device commissioning time under 2 minutes per device
 
 ---
 
 ## Messaging
 
-> **"SmartFeeder: Empowering hobby farmers with smart, remote feeder management. Monitor your animals, control feeding, and ensure their well-being from anywhere."**
+> **"SmartFeeder: Empowering hobby farmers with smart, remote feeder management. Monitor your animals, control feeding, and ensure their well-being from anywhere with real-time IoT connectivity."**
 
 ---
 
 ## Timeline / Release Planning
 
-- **MVP Development:** June–August 2025
-- **Beta Testing:** September 2025
-- **Official Launch:** October 2025
+- **MVP Development:** June–August 2024 ✅ **COMPLETED**
+- **IoT Integration & Admin Portal:** September–December 2024 ✅ **COMPLETED**
+- **Beta Testing:** January–February 2025
+- **Payment Integration & Camera Feeds:** March–April 2025
+- **Official Launch:** May 2025
+
+---
+
+## Current Implementation Status
+
+### ✅ **Completed Features**
+
+- **User Authentication System** (Supabase Auth)
+- **Admin Portal & Device Management**
+- **Real-time IoT Integration** (AWS IoT Core)
+- **Advanced Feeding Schedules** (Multiple sessions, complex intervals)
+- **Live Sensor Dashboard** (Real-time data visualization)
+- **Manual Feed Release** (MQTT commands)
+- **Device Commissioning Workflow**
+- **Performance-optimized Database Functions**
+
+### 🚧 **In Development**
+
+- Camera feed integration
+- Payment/subscription system
+- Push notification system
+
+### 📋 **Planned**
+
+- Mobile app
+- Advanced analytics
+- Weather integration
 
 ---
 
@@ -40,127 +71,286 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 
 ### Primary Persona
 
-**John** – 45-year-old hobby farmer with a full-time city job, owns a small farm with horses and chickens. Needs to ensure animals are fed on schedule remotely.
+**John** – 45-year-old hobby farmer with a full-time city job, owns a small farm with horses and chickens. Needs to ensure animals are fed on schedule remotely and monitor their health through sensor data.
 
 ### Secondary Persona
 
-**Sarah** – Retiree who keeps goats and enjoys gardening. Wants to reduce physical workload and monitor feeding while traveling.
+**Sarah** – Retiree who keeps goats and enjoys gardening. Wants to reduce physical workload and monitor feeding while traveling, with real-time alerts for any issues.
+
+### Admin Persona
+
+**Mark** – Operations manager responsible for commissioning and managing IoT devices before they're deployed to customers.
 
 ---
 
 ## User Scenarios
 
-- **Scenario 1:** John, at his office, checks the SmartFeeder app to see if his horses have eaten. He views a mocked camera feed showing an empty feeder, triggers a manual feed release, and sets a schedule for the next feeding.
-- **Scenario 2:** Sarah, on vacation, uses the app on her tablet to adjust her goats’ feeding schedule and receives a notification about a low feed level (mocked).
+- **Scenario 1:** John, at his office, checks the SmartFeeder app to see real-time sensor data from his horse feeder. He notices the temperature is dropping and triggers a manual feed release via MQTT command, then adjusts the feeding schedule for winter months.
+- **Scenario 2:** Sarah, on vacation, receives a low battery alert from her goat feeder. She views the sensor dashboard, sees the device is still connected, and schedules an increased feeding amount for the next day.
+- **Scenario 3:** Mark (admin) receives a batch of 50 new IoT devices. He bulk uploads their device IDs to the commissioning system, making them available for customer assignment.
 
 ---
 
 ## User Stories / Features / Requirements
 
-### User Authentication
+### User Authentication ✅ **IMPLEMENTED**
 
-- Users can sign up with an email and password.
-- Users can log in with their email and password.
-- Users can reset their password if forgotten.
-- _Future enhancement:_ Implement two-factor authentication.
+- Users can sign up with an email and password
+- Users can log in with their email and password
+- Users can reset their password if forgotten
+- Email confirmation system for new accounts
+- Secure session management via Supabase
 
-### Dashboard
+### Admin Portal & Device Management ✅ **IMPLEMENTED**
 
-- Display a list of all feeders associated with the logged-in user.
-- Each feeder should show:
-  - Name
-  - Location
-  - Animal type
-  - Current status (e.g., 'Full', 'Low', 'Empty')
-  - Last fed time
-  - Next scheduled feeding time
-- Provide quick actions for each feeder:
-  - **Manual feed release:** Button to simulate feed release and show confirmation.
-  - **View camera feed:** Button opens a modal or new page with a placeholder image/video.
+- **Device Commissioning System:**
+  - Admins can add new device IDs to the system
+  - Bulk upload functionality for multiple devices
+  - Device validation ensures only commissioned devices can be used
+  - Batch tracking and notes for manufacturing management
+- **Admin Access Control:**
+  - Admin privileges managed via JWT `app_metadata.is_admin`
+  - Secure RLS policies for admin-only operations
+- **Device Inventory:**
+  - Track device availability and assignment status
+  - Support for testing mode (multiple users per device)
+  - Device orphaning and reclaiming functionality
 
-### Feeder Management
+### Dashboard ✅ **IMPLEMENTED**
 
-- Allow users to add new feeders with:
-  - Unique ID (auto-generated)
-  - Name
-  - Location
-  - Animal type
-- Allow users to edit existing feeders' details.
-- Allow users to delete feeders.
+- Display all feeders associated with the logged-in user
+- Each feeder shows:
+  - Name, location, and device ID
+  - Real-time connection status (online/offline/last communication)
+  - Creation date and timezone information
+  - Quick access to feeder management
+- Performance-optimized loading with database functions
+- Responsive design for mobile and desktop
 
-### Camera Integration
+### Feeder Management ✅ **IMPLEMENTED**
 
-- For each feeder, display a mocked camera feed (static image or looping video).
-- _Future enhancement:_ Integrate with actual camera hardware.
+- Users can add new feeders with commissioned device IDs only
+- Device validation prevents unauthorized feeder creation
+- Feeder details include:
+  - User-friendly name and description
+  - Location information
+  - Timezone configuration
+  - Device ID linking to IoT hardware
+- Edit and delete functionality with proper cleanup
+- Device orphaning system for device reassignment
 
-### Scheduling
+### Real-time IoT Integration ✅ **IMPLEMENTED**
 
-- Allow users to set feeding schedules for each feeder.
-- Schedules can be daily or weekly with specific times.
-- Display a list of all schedules, with the ability to edit or delete them.
+- **AWS IoT Core Integration:**
+  - MQTT communication for real-time commands
+  - Secure authentication via Cognito Identity Pools
+  - Topic-based messaging (`${deviceId}/writeDataRequest`)
+- **Manual Feed Release:**
+  - Real-time MQTT commands to trigger feeding
+  - Configurable feed amounts
+  - Immediate feedback and confirmation
+- **Connection Monitoring:**
+  - Real-time device status tracking
+  - Last communication timestamps
+  - Connection quality indicators
 
-### Notifications
+### Sensor Data Dashboard ✅ **IMPLEMENTED**
 
-- Show mocked notifications for:
-  - Low feed levels
-  - Technical issues (e.g., camera offline)
-  - Upcoming feedings
-- _Future enhancement:_ Integrate with actual notification systems (email, push).
+- **Real-time Data Visualization:**
+  - Multiple sensor types (temperature, humidity, voltage, battery, etc.)
+  - Interactive charts with Recharts library
+  - Time-range filtering (daily, weekly, monthly, all-time)
+- **Performance Optimization:**
+  - Client-side filtering to reduce database load
+  - Efficient data caching and updates
+  - Responsive chart rendering
+- **Sensor Analytics:**
+  - Latest values and reading counts
+  - Automatic unit detection and display
+  - Multi-sensor correlation views
 
-### Payments (if applicable)
+### Advanced Feeding Schedules ✅ **IMPLEMENTED**
 
-- Offer subscription plans (e.g., monthly, yearly) for app access.
-- Allow one-time payments for specific features or premium content.
-- Integrate with **Stripe** for payment processing.
+- **Complex Scheduling:**
+  - Multiple feeding sessions per day
+  - Various intervals: daily, weekly, biweekly, four-weekly
+  - Custom day-of-week selection
+  - Start and end date ranges
+- **MQTT Integration:**
+  - Automatic schedule conversion to MQTT commands
+  - Real-time schedule updates to devices
+  - Feed amount tracking per session
+- **Schedule Management:**
+  - Visual schedule overview with next feeding times
+  - Active/inactive schedule status
+  - Easy editing and deletion
+
+### Camera Integration 🚧 **PLANNED**
+
+- Placeholder camera feed modals currently implemented
+- _Future enhancement:_ Integrate with actual camera hardware
+- Real-time video streaming capability
+
+### Notifications 🚧 **PARTIAL**
+
+- Basic toast notifications for user actions
+- _Future enhancement:_ Email and push notification system for:
+  - Low battery alerts
+  - Device connectivity issues
+  - Scheduled feeding confirmations
+  - System maintenance notifications
+
+### Payments 📋 **PLANNED**
+
+- Subscription plans for app access
+- Integration with **Stripe** for payment processing
+- Tiered feature access based on subscription level
 
 ---
 
-## Features Out
+## Database Schema ✅ **IMPLEMENTED**
+
+### Core Tables
+
+- **`feeders`** - User-owned feeder devices with metadata
+- **`sensor_data`** - IoT sensor readings with timestamps
+- **`feeding_schedules`** - Complex feeding schedule definitions
+- **`feeding_sessions`** - Individual feeding times within schedules
+- **`commissioned_feeders`** - Admin-managed device inventory
+
+### Key Features
+
+- Row Level Security (RLS) on all tables
+- Automated timestamp triggers
+- Optimized indexes for query performance
+- Device validation functions
+- Admin privilege enforcement
+
+---
+
+## Technical Requirements ✅ **IMPLEMENTED**
+
+### Frontend Stack
+
+- **Framework:** Next.js 15 with React 19
+- **Language:** TypeScript (strict mode, no 'any' types)
+- **Styling:** Tailwind CSS v4
+- **UI Components:** Shadcn UI (latest)
+- **Charts:** Recharts for data visualization
+- **Notifications:** Sonner for toast messages
+
+### Backend & Database
+
+- **Database:** Supabase (PostgreSQL)
+- **Authentication:** Supabase Auth with RLS
+- **Real-time:** Supabase subscriptions
+- **Functions:** PostgreSQL functions for performance
+
+### AWS IoT Infrastructure
+
+- **IoT Core:** MQTT message broker
+- **Authentication:** Cognito Identity Pools
+- **SDK:** AWS SDK v3 for JavaScript
+- **Infrastructure:** AWS CDK for deployment
+
+### Development & Deployment
+
+- **Package Manager:** pnpm (required)
+- **Hosting:** Vercel
+- **Analytics:** Vercel Analytics
+- **Version Control:** Git with Husky pre-commit hooks
+- **Testing:** Jest for unit tests
+
+---
+
+## Security & Performance ✅ **IMPLEMENTED**
+
+### Security Features
+
+- Row Level Security (RLS) on all database tables
+- JWT-based authentication with secure session management
+- Admin access control via app metadata
+- Device validation preventing unauthorized access
+- Secure MQTT communication with AWS IoT Core
+
+### Performance Optimizations
+
+- Database functions for complex queries
+- Client-side data filtering and caching
+- Optimized component loading with React Suspense
+- Efficient indexing strategy
+- Performance monitoring with Vercel Analytics
+
+---
+
+## Infrastructure & DevOps ✅ **IMPLEMENTED**
+
+### AWS CDK Stack
+
+- Infrastructure as Code for AWS resources
+- Automated deployment pipeline
+- Environment-specific configurations
+
+### Development Workflow
+
+- Husky pre-commit hooks for code quality
+- Automated testing and build verification
+- Supabase migrations for database changes
+- TypeScript strict mode enforcement
+
+---
+
+## Features Out of Scope
 
 - Third-party weather service integration
 - Advanced animal behavior analytics
-- Dedicated mobile app (focus on responsive web app initially)
+- Dedicated mobile app (focus on responsive web app)
+- Video recording and storage
+- Multi-tenant architecture (single-user feeders only)
 
 ---
 
-## Designs
+## Open Issues & Future Enhancements
 
-- Create wireframes and mockups using **Figma**
-- Use **Shadcn UI** components for consistent, accessible design
+### Current Limitations
 
----
+- Camera feeds are placeholder implementations
+- No push notification system
+- Payment integration not implemented
+- Limited to single-user device ownership (testing mode allows multiple)
 
-## Open Issues
+### Future Roadmap
 
-- Handling multiple feeders per user (e.g., maximum limit)
-- Mocked camera feed format (static images vs. videos)
-- Data security for camera feeds and user data
+- Real camera hardware integration
+- Comprehensive notification system (email, SMS, push)
+- Subscription billing with Stripe
+- Mobile app development
+- Advanced analytics and reporting
+- Weather integration for feeding adjustments
+- Permissions system to allow admin users, team members, view only users, etc.
 
 ---
 
 ## Q&A
 
 **Q:** Can the app be used on mobile devices?  
-**A:** Yes, the web app is responsive for mobile use; a dedicated app is planned later.
+**A:** Yes, the web app is fully responsive and optimized for mobile use.
 
-**Q:** Is user data secure?  
-**A:** Yes, we use encryption and secure authentication via **Supabase**.
+**Q:** How secure is the IoT communication?  
+**A:** All MQTT communication is secured through AWS IoT Core with Cognito authentication and encrypted channels.
+
+**Q:** Can multiple users share a feeder device?  
+**A:** Currently in testing mode allowing multiple users per device. Production will enforce one-user-per-device ownership.
+
+**Q:** What happens if a device goes offline?  
+**A:** The system tracks connection status and displays last communication time. Users receive notifications for extended offline periods.
 
 ---
 
 ## Other Considerations
 
-- Prioritize accessibility for non-tech-savvy users (simple navigation)
-- Plan for scalability to handle a growing user base
-- Do not use 'any' types, always define a type
-
----
-
-## Technical Requirements
-
-- **Frontend:** Next.js, React, TypeScript, Tailwind CSS, Shadcn UI
-- **Backend:** Supabase (PostgreSQL database, Authentication)
-- **Package Manager:** pnpm
-- **Hosting:** Vercel
-- **Payments:** Stripe
-- **Analytics:** Vercel Analytics
+- Prioritize accessibility for non-tech-savvy users
+- Maintain scalability for growing user base and device inventory
+- Ensure 99.9% uptime for critical feeding operations
+- Plan for international expansion beyond Australia
+- Maintain backward compatibility with existing IoT devices
