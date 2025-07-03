@@ -1,7 +1,7 @@
 -- Migration: Add timezone field to feeders table
 -- Purpose: Allow users to set timezone for each feeder to handle scheduling properly
 -- Author: System
--- Date: 2024-12-20
+-- Date: 2025-07-01
 
 -- Add timezone column to feeders table
 alter table public.feeders 

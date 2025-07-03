@@ -1,7 +1,7 @@
 -- Migration: Allow orphaned feeders (soft delete functionality)
 -- Purpose: Enable "soft delete" of feeders by removing user association rather than deleting data
 -- Author: System
--- Date: 2024-12-20
+-- Date: 2025-07-01
 -- 
 -- This migration modifies the feeders table to allow feeders to exist without a user_id,
 -- enabling preservation of historical data when users "delete" feeders from their account.

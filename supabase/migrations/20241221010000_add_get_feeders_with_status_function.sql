@@ -1,7 +1,7 @@
 -- Migration: Add function to get feeders with connection status efficiently
 -- Purpose: Optimize dashboard loading by calculating feeder status at database level
 -- Author: System
--- Date: 2024-12-21
+-- Date: 2025-07-01
 
 -- Function to get feeders with their connection status for a specific user
 CREATE OR REPLACE FUNCTION public.get_feeders_with_status(user_uuid UUID)

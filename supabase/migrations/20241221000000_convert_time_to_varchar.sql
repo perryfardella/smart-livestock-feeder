@@ -1,6 +1,7 @@
 /*
  * Migration: Convert feeding_sessions.time from TIME to VARCHAR(5)
  * Purpose: Standardize time format to HH:MM across frontend and backend
+ * Date: 2025-07-01
  * Changes: time column type and format, add validation constraint
  */
 

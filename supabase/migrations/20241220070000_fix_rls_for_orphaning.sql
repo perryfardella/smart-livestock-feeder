@@ -1,7 +1,7 @@
 -- Migration: Fix RLS policy for orphaning feeders (final fix)
 -- Purpose: Properly allow setting user_id to NULL without RLS violations
 -- Author: System
--- Date: 2024-12-20
+-- Date: 2025-07-01
 
 -- Drop all existing update policies for feeders
 drop policy if exists "Users can update feeder details" on public.feeders;

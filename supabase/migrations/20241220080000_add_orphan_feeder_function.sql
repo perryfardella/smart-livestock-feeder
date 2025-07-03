@@ -1,7 +1,7 @@
 -- Migration: Add function to orphan feeders with elevated privileges
 -- Purpose: Create a function that can bypass RLS to set user_id to null
 -- Author: System
--- Date: 2024-12-20
+-- Date: 2025-07-01
 
 -- Create a function that runs with security definer (elevated privileges)
 create or replace function public.orphan_feeder(feeder_id uuid, requesting_user_id uuid)

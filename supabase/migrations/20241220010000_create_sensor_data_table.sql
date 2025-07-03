@@ -1,7 +1,7 @@
 -- Migration: Create sensor_data table for IoT sensor readings
 -- Purpose: Store sensor readings from IoT devices in a normalized format
 -- Author: System
--- Date: 2024-12-20
+-- Date: 2025-06-05
 -- 
 -- This migration creates a sensor_data table to store IoT sensor readings
 -- in a long/narrow format where each sensor reading is stored as a separate row.

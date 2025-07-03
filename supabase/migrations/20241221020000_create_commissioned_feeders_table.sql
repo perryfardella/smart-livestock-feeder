@@ -1,7 +1,7 @@
 -- Migration: Create commissioned feeders table for device ID management
 -- Purpose: Track which device IDs have been commissioned and are valid for use
 -- Author: System
--- Date: 2024-12-21
+-- Date: 2025-07-02
 -- 
 -- This migration creates a commissioned_feeders table to manage device IDs that have been
 -- manufactured and commissioned. Users can only add feeders with device IDs that exist

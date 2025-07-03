@@ -321,6 +321,14 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 - Husky pre-commit hooks for code quality
 - Automated testing and build verification
 - Supabase migrations for database changes
+
+#### Migration Guidelines
+
+- **Always use current date** for migration file timestamps and header dates
+- **Migration file naming**: `YYYYMMDDHHMMSS_description.sql`
+- **Header format**: Include migration purpose, date, author, and affected tables
+- **Use git commit dates** for existing files when updating headers
+- **Use author name of Perry** It's me
 - TypeScript strict mode enforcement
 
 ---

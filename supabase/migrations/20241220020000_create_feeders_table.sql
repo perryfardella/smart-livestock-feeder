@@ -1,7 +1,7 @@
 -- Migration: Create feeders table for user-owned feeding devices
 -- Purpose: Link users to their feeding devices and store feeder metadata
 -- Author: System
--- Date: 2024-12-20
+-- Date: 2025-06-06
 -- 
 -- This migration creates a feeders table to establish the relationship between
 -- users and their IoT feeding devices. This allows users to claim ownership of

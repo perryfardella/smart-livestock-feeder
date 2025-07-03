@@ -1,7 +1,7 @@
 -- Migration: Add function to find and reclaim orphaned feeders
 -- Purpose: Create functions to safely handle orphaned feeder operations
 -- Author: System
--- Date: 2024-12-20
+-- Date: 2025-07-01
 
 -- Function to find an orphaned feeder by device_id
 create or replace function public.find_orphaned_feeder(device_id_param text)

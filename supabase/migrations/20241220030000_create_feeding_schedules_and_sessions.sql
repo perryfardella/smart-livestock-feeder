@@ -3,6 +3,7 @@
  * Purpose: Store feeding schedule configurations and their associated feeding sessions
  * Tables: feeding_schedules, feeding_sessions
  * Features: RLS enabled, foreign key relationships, proper indexing
+ * Date: 2025-06-22
  */
 
 -- Create enum for feeding intervals
