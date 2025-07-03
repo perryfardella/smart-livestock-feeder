@@ -247,6 +247,67 @@ export async function declineInvitation(invitationToken: string) {
 }
 
 /**
+ * Revoke a pending invitation (for feeder owners/managers)
+ */
+export async function revokeInvitation(invitationId: string) {
+  try {
+    const supabase = await createClient();
+
+    // Get current user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return { success: false, error: "Authentication required" };
+    }
+
+    // Get the invitation to check feeder ownership
+    const { data: invitation, error: invitationError } = await supabase
+      .from("feeder_invitations")
+      .select("feeder_id, status")
+      .eq("id", invitationId)
+      .single();
+
+    if (invitationError || !invitation) {
+      return { success: false, error: "Invitation not found" };
+    }
+
+    // Check if invitation is still pending
+    if (invitation.status !== "pending") {
+      return { success: false, error: "Can only revoke pending invitations" };
+    }
+
+    // Check if user has permission to revoke invitations for this feeder
+    const userRole = await getUserFeederRole(invitation.feeder_id, user.id);
+    if (!userRole || !["owner", "manager"].includes(userRole)) {
+      return { success: false, error: "Permission denied" };
+    }
+
+    // Update invitation status to revoked
+    const { error: updateError } = await supabase
+      .from("feeder_invitations")
+      .update({
+        status: "revoked",
+        responded_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", invitationId);
+
+    if (updateError) {
+      console.error("Error revoking invitation:", updateError);
+      return { success: false, error: "Failed to revoke invitation" };
+    }
+
+    revalidatePath(`/dashboard/feeder/${invitation.feeder_id}`);
+    return { success: true, message: "Invitation revoked successfully" };
+  } catch (error) {
+    console.error("Error revoking invitation:", error);
+    return { success: false, error: "Failed to revoke invitation" };
+  }
+}
+
+/**
  * Get all memberships for a feeder
  */
 export async function getFeederMemberships(feederId: string) {

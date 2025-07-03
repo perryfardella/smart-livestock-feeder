@@ -91,12 +91,26 @@ export function InvitationStatus({
     setRevokingId(invitationId);
 
     try {
-      // TODO: Implement revoke invitation API endpoint
-      // This would be a PATCH request to update the invitation status to 'revoked'
+      const response = await fetch(`/api/feeders/${feederId}/invitations`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          invitation_id: invitationId,
+          action: "revoke",
+        }),
+      });
 
-      toast.success(`Invitation to ${email} revoked`);
-      await loadInvitations();
-      onInvitationChanged?.();
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(`Invitation to ${email} revoked`);
+        await loadInvitations();
+        onInvitationChanged?.();
+      } else {
+        toast.error(data.error || "Failed to revoke invitation");
+      }
     } catch (error) {
       console.error("Error revoking invitation:", error);
       toast.error("Failed to revoke invitation");
