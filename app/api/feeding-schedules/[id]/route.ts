@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireFeederPermission } from "@/lib/utils/permissions";
 
 export async function GET(
   request: NextRequest,
@@ -20,6 +21,7 @@ export async function GET(
     }
 
     // Get the feeding schedule with sessions
+    // Note: RLS now handles permission checking via updated policies
     const { data: schedule, error } = await supabase
       .from("feeding_schedules")
       .select(
@@ -33,13 +35,26 @@ export async function GET(
       `
       )
       .eq("id", id)
-      .eq("user_id", user.id)
       .single();
 
     if (error || !schedule) {
       return NextResponse.json(
         { error: "Feeding schedule not found" },
         { status: 404 }
+      );
+    }
+
+    // Additional permission check for viewing this specific schedule
+    const permissionCheck = await requireFeederPermission(
+      schedule.feeder_id,
+      "view_feeding_schedules",
+      user.id
+    );
+
+    if (!permissionCheck.authorized) {
+      return NextResponse.json(
+        { error: permissionCheck.error },
+        { status: 403 }
       );
     }
 
@@ -116,18 +131,31 @@ export async function PUT(
       }
     }
 
-    // Verify user owns the schedule
+    // Get the schedule to check feeder_id, then verify permissions
     const { data: existingSchedule, error: scheduleError } = await supabase
       .from("feeding_schedules")
       .select("id, feeder_id")
       .eq("id", id)
-      .eq("user_id", user.id)
       .single();
 
     if (scheduleError || !existingSchedule) {
       return NextResponse.json(
-        { error: "Feeding schedule not found or access denied" },
+        { error: "Feeding schedule not found" },
         { status: 404 }
+      );
+    }
+
+    // Check if user has permission to edit feeding schedules
+    const permissionCheck = await requireFeederPermission(
+      existingSchedule.feeder_id,
+      "edit_feeding_schedules",
+      user.id
+    );
+
+    if (!permissionCheck.authorized) {
+      return NextResponse.json(
+        { error: permissionCheck.error },
+        { status: 403 }
       );
     }
 
@@ -228,12 +256,39 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify user owns the schedule and delete it
+    // Get the schedule to check feeder_id, then verify permissions
+    const { data: scheduleToDelete, error: scheduleError } = await supabase
+      .from("feeding_schedules")
+      .select("id, feeder_id")
+      .eq("id", id)
+      .single();
+
+    if (scheduleError || !scheduleToDelete) {
+      return NextResponse.json(
+        { error: "Feeding schedule not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if user has permission to delete feeding schedules
+    const permissionCheck = await requireFeederPermission(
+      scheduleToDelete.feeder_id,
+      "delete_feeding_schedules",
+      user.id
+    );
+
+    if (!permissionCheck.authorized) {
+      return NextResponse.json(
+        { error: permissionCheck.error },
+        { status: 403 }
+      );
+    }
+
+    // Delete the schedule (RLS will handle the permission check)
     const { error: deleteError } = await supabase
       .from("feeding_schedules")
       .delete()
-      .eq("id", id)
-      .eq("user_id", user.id);
+      .eq("id", id);
 
     if (deleteError) {
       console.error("Error deleting feeding schedule:", deleteError);

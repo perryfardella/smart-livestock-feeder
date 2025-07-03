@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireFeederPermission } from "@/lib/utils/permissions";
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build query for feeding schedules with sessions
+    // Note: RLS now handles permission checking via updated policies
     let query = supabase
       .from("feeding_schedules")
       .select(
@@ -30,11 +32,24 @@ export async function GET(request: NextRequest) {
         )
       `
       )
-      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     // Filter by feeder if specified
     if (feederId) {
+      // Additional permission check for specific feeder
+      const permissionCheck = await requireFeederPermission(
+        feederId,
+        "view_feeding_schedules",
+        user.id
+      );
+
+      if (!permissionCheck.authorized) {
+        return NextResponse.json(
+          { error: permissionCheck.error },
+          { status: 403 }
+        );
+      }
+
       query = query.eq("feeder_id", feederId);
     }
 
@@ -123,18 +138,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Verify user owns the feeder
-    const { data: feeder, error: feederError } = await supabase
-      .from("feeders")
-      .select("id")
-      .eq("id", feederId)
-      .eq("user_id", user.id)
-      .single();
+    // Check if user has permission to create feeding schedules
+    const permissionCheck = await requireFeederPermission(
+      feederId,
+      "create_feeding_schedules",
+      user.id
+    );
 
-    if (feederError || !feeder) {
+    if (!permissionCheck.authorized) {
       return NextResponse.json(
-        { error: "Feeder not found or access denied" },
-        { status: 404 }
+        { error: permissionCheck.error },
+        { status: 403 }
       );
     }
 
