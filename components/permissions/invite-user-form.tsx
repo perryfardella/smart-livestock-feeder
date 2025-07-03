@@ -28,6 +28,13 @@ const ROLE_DESCRIPTIONS = {
   owner: "Full access including team management",
 } as const;
 
+const ROLES = [
+  { value: "viewer", label: "Viewer" },
+  { value: "scheduler", label: "Scheduler" },
+  { value: "manager", label: "Manager" },
+  { value: "owner", label: "Owner" },
+] as const;
+
 export function InviteUserForm({
   feederId,
   onInviteSent,
@@ -117,42 +124,20 @@ export function InviteUserForm({
               value={role}
               onValueChange={(value: FeederRole) => setRole(value)}
             >
-              <SelectTrigger>
+              <SelectTrigger size="auto">
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="viewer">
-                  <div className="flex flex-col">
-                    <span className="font-medium">Viewer</span>
-                    <span className="text-sm text-gray-500">
-                      {ROLE_DESCRIPTIONS.viewer}
-                    </span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="scheduler">
-                  <div className="flex flex-col">
-                    <span className="font-medium">Scheduler</span>
-                    <span className="text-sm text-gray-500">
-                      {ROLE_DESCRIPTIONS.scheduler}
-                    </span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="manager">
-                  <div className="flex flex-col">
-                    <span className="font-medium">Manager</span>
-                    <span className="text-sm text-gray-500">
-                      {ROLE_DESCRIPTIONS.manager}
-                    </span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="owner">
-                  <div className="flex flex-col">
-                    <span className="font-medium">Owner</span>
-                    <span className="text-sm text-gray-500">
-                      {ROLE_DESCRIPTIONS.owner}
-                    </span>
-                  </div>
-                </SelectItem>
+                {ROLES.map((roleOption) => (
+                  <SelectItem key={roleOption.value} value={roleOption.value}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{roleOption.label}</span>
+                      <span className="text-sm text-gray-500">
+                        {ROLE_DESCRIPTIONS[roleOption.value]}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
