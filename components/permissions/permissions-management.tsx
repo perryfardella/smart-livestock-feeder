@@ -187,14 +187,15 @@ export function PermissionsManagement({
                   {isOwner ? "Feeder Owner" : "Team Member"}
                 </p>
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-blue-100 text-blue-800">
-                    {currentUserRole}
+                  <Badge
+                    className={
+                      isOwner
+                        ? "bg-purple-100 text-purple-800"
+                        : "bg-blue-100 text-blue-800"
+                    }
+                  >
+                    {currentUserRole === "owner" ? "Owner" : currentUserRole}
                   </Badge>
-                  {isOwner && (
-                    <Badge className="bg-purple-100 text-purple-800">
-                      Owner
-                    </Badge>
-                  )}
                 </div>
               </div>
             </div>
