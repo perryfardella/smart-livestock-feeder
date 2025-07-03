@@ -26,6 +26,9 @@ import {
 } from "@/lib/utils/feeder-status";
 import { format } from "date-fns";
 import { FeedingScheduleSection } from "./feeding-schedule";
+import { PermissionsManagement } from "@/components/permissions/permissions-management";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createClient } from "@/lib/supabase/client";
 
 export function FeederUI({ feeder }: { feeder: Feeder }) {
   const [connectionStatus, setConnectionStatus] =
@@ -34,6 +37,22 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
   const [feedDialogOpen, setFeedDialogOpen] = useState(false);
   const [feedAmount, setFeedAmount] = useState("");
   const [isReleasingFeed, setIsReleasingFeed] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+
+    getCurrentUser();
+  }, []);
 
   // Check connection status on component mount and periodically
   useEffect(() => {
@@ -326,18 +345,40 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
         </div>
 
         {/* Main Content */}
-        <div className="space-y-6">
-          {/* Feeding Schedule */}
-          <FeedingScheduleSection feederId={feeder.id} />
-        </div>
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="team">Team & Permissions</TabsTrigger>
+          </TabsList>
 
-        {/* Sensor Data Section */}
-        <div className="mt-8">
-          <SensorDashboard
-            deviceId={feeder.device_id}
-            feederName={feeder.name}
-          />
-        </div>
+          <TabsContent value="overview" className="space-y-6">
+            {/* Feeding Schedule */}
+            <FeedingScheduleSection feederId={feeder.id} />
+
+            {/* Sensor Data Section */}
+            <div className="mt-8">
+              <SensorDashboard
+                deviceId={feeder.device_id}
+                feederName={feeder.name}
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="team" className="space-y-6">
+            {currentUserId && (
+              <PermissionsManagement
+                feederId={feeder.id}
+                feederName={feeder.name}
+                currentUserId={currentUserId}
+              />
+            )}
+            {!currentUserId && (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-gray-500">Loading user information...</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

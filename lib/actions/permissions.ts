@@ -274,14 +274,7 @@ export async function getFeederMemberships(feederId: string) {
 
     const { data: memberships, error } = await supabase
       .from("feeder_memberships")
-      .select(
-        `
-        *,
-        profiles:user_id (
-          email
-        )
-      `
-      )
+      .select("*")
       .eq("feeder_id", feederId)
       .eq("status", "accepted")
       .order("created_at", { ascending: false });

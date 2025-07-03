@@ -325,7 +325,7 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 #### Migration Guidelines
 
 - **Always use current date** for migration file timestamps and header dates
-- **Migration file naming**: `YYYYMMDDHHMMSS_description.sql`
+- **Migration file naming**: `SSHHDDMMYYYY_description.sql`
 - **Header format**: Include migration purpose, date, author, and affected tables
 - **Use git commit dates** for existing files when updating headers
 - **Use author name of Perry** It's me
