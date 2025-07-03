@@ -117,14 +117,7 @@ create policy "Users can update their own membership status"
   for update
   to authenticated
   using (auth.uid() = user_id)
-  with check (
-    auth.uid() = user_id
-    -- Only allow changing status and accepted_at timestamp
-    and (
-      old.status != new.status
-      or old.accepted_at != new.accepted_at
-    )
-  );
+  with check (auth.uid() = user_id);
 
 -- RLS Policy: Feeder owners can update memberships for their feeders
 create policy "Feeder owners can update feeder memberships"
