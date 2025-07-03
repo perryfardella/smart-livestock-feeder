@@ -1,1 +1,3 @@
 - Need performance optimisations for feeder page
+- Full permissions system
+- Add to the admin dashboard the ability to add someone as an admin

@@ -191,6 +191,24 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 - _Future enhancement:_ Integrate with actual camera hardware
 - Real-time video streaming capability
 
+### Permissions & Team Management 📋 **PLANNED**
+
+- **Multi-User Access Control:**
+  - Feeder owners can invite team members via email
+  - Support for users with and without existing accounts
+  - Role-based permissions (Viewer, Scheduler, Manager, Owner)
+  - Fine-grained permission controls for future expansion
+- **Invitation System:**
+  - Email-based invitations with secure tokens
+  - Auto-signup flow for new users
+  - Accept/decline workflow for existing users
+  - Time-limited invitation tokens (7 days)
+- **Team Management:**
+  - Member list with role assignments
+  - Permission management interface
+  - Self-removal capability for team members
+  - Audit trail for permission changes
+
 ### Notifications 🚧 **PARTIAL**
 
 - Basic toast notifications for user actions
@@ -199,6 +217,7 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
   - Device connectivity issues
   - Scheduled feeding confirmations
   - System maintenance notifications
+  - Team invitation and permission change notifications
 
 ### Payments 📋 **PLANNED**
 
@@ -217,6 +236,12 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 - **`feeding_schedules`** - Complex feeding schedule definitions
 - **`feeding_sessions`** - Individual feeding times within schedules
 - **`commissioned_feeders`** - Admin-managed device inventory
+
+### Permissions Tables (Planned)
+
+- **`feeder_memberships`** - Team member access to feeders
+- **`feeder_permissions`** - Fine-grained permission controls
+- **`feeder_invitations`** - Email invitation tracking and tokens
 
 ### Key Features
 
@@ -317,17 +342,20 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 - Camera feeds are placeholder implementations
 - No push notification system
 - Payment integration not implemented
-- Limited to single-user device ownership (testing mode allows multiple)
+- Single-user device ownership (permissions system will enable multi-user access)
 
 ### Future Roadmap
 
+- **Permissions & Team Management** (Q1 2025)
+  - Multi-user access control with role-based permissions
+  - Email invitation system for team collaboration
+  - Fine-grained permission management interface
 - Real camera hardware integration
 - Comprehensive notification system (email, SMS, push)
 - Subscription billing with Stripe
 - Mobile app development
 - Advanced analytics and reporting
 - Weather integration for feeding adjustments
-- Permissions system to allow admin users, team members, view only users, etc.
 
 ---
 
@@ -340,7 +368,7 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 **A:** All MQTT communication is secured through AWS IoT Core with Cognito authentication and encrypted channels.
 
 **Q:** Can multiple users share a feeder device?  
-**A:** Currently in testing mode allowing multiple users per device. Production will enforce one-user-per-device ownership.
+**A:** Yes, through the planned permissions system. Feeder owners can invite team members with different access levels (Viewer, Scheduler, Manager, Owner) to collaborate on feeder management.
 
 **Q:** What happens if a device goes offline?  
 **A:** The system tracks connection status and displays last communication time. Users receive notifications for extended offline periods.
