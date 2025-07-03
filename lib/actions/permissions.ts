@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { randomUUID } from "crypto";
 import {
   FeederRole,
   PermissionType,
@@ -89,20 +90,52 @@ export async function inviteUserToFeeder(data: InviteUserToFeederData) {
       };
     }
 
-    // Create the invitation
-    const { data: invitation, error: inviteError } = await supabase
-      .from("feeder_invitations")
-      .insert({
-        feeder_id: data.feeder_id,
-        inviter_id: user.id,
-        invitee_email: data.invitee_email,
-        role: data.role,
-      })
-      .select()
-      .single();
+    let invitation;
+    let inviteError;
+
+    if (
+      existingInvitation &&
+      ["revoked", "declined", "expired"].includes(existingInvitation.status)
+    ) {
+      // Reuse existing invitation by updating it
+      const updateResult = await supabase
+        .from("feeder_invitations")
+        .update({
+          inviter_id: user.id,
+          role: data.role,
+          status: "pending",
+          invitation_token: randomUUID(),
+          expires_at: new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000
+          ).toISOString(), // 7 days from now
+          responded_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingInvitation.id)
+        .select()
+        .single();
+
+      invitation = updateResult.data;
+      inviteError = updateResult.error;
+    } else {
+      // Create new invitation
+      const insertResult = await supabase
+        .from("feeder_invitations")
+        .insert({
+          feeder_id: data.feeder_id,
+          inviter_id: user.id,
+          invitee_email: data.invitee_email,
+          role: data.role,
+        })
+        .select()
+        .single();
+
+      invitation = insertResult.data;
+      inviteError = insertResult.error;
+    }
 
     if (inviteError) {
-      console.error("Error creating invitation:", inviteError);
+      console.error("Error creating/updating invitation:", inviteError);
       return { success: false, error: "Failed to create invitation" };
     }
 
