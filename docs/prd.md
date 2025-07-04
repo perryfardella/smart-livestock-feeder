@@ -193,21 +193,113 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 
 ### Permissions & Team Management 📋 **PLANNED**
 
+#### **Multi-User Access Control System**
+
+SmartFeeder implements a comprehensive role-based access control system that allows feeder owners to invite team members with different levels of access. This enables collaborative feeder management while maintaining security and appropriate access boundaries.
+
+#### **Permission Roles & Access Levels**
+
+The system defines four distinct permission roles, each with specific capabilities:
+
+##### **🔍 Viewer Role**
+
+**Use Case:** Read-only access for monitoring purposes
+**Permissions:**
+
+- ✅ View real-time sensor data (temperature, humidity, battery, etc.)
+- ✅ View feeding schedules and upcoming feeding times
+- ✅ View camera feeds (when available)
+- ❌ Cannot create, edit, or delete feeding schedules
+- ❌ Cannot trigger manual feeding
+- ❌ Cannot modify feeder settings
+- ❌ Cannot invite other users or manage permissions
+
+**Ideal for:** Family members, farm visitors, or monitoring services who need to check feeder status but shouldn't make changes.
+
+##### **📅 Scheduler Role**
+
+**Use Case:** Full feeding management without system administration
+**Permissions:**
+
+- ✅ All Viewer permissions, plus:
+- ✅ Create new feeding schedules
+- ✅ Edit existing feeding schedules
+- ✅ Delete feeding schedules
+- ✅ Trigger manual feed release
+- ❌ Cannot edit feeder settings (name, location, timezone)
+- ❌ Cannot invite other users or manage permissions
+
+**Ideal for:** Trusted farm hands, family members, or caretakers who manage daily feeding operations.
+
+##### **⚙️ Manager Role**
+
+**Use Case:** Administrative control over feeder operations and team management
+**Permissions:**
+
+- ✅ All Scheduler permissions, plus:
+- ✅ Edit feeder settings (name, location, timezone, description)
+- ✅ Invite users as Viewer or Scheduler roles
+- ✅ Manage permissions for Viewers and Schedulers
+- ✅ Remove Viewers and Schedulers from the team
+- ❌ Cannot invite other Managers (only Owner can do this)
+- ❌ Cannot manage other Manager permissions
+
+**Ideal for:** Farm managers or senior staff who need full operational control and can manage day-to-day team access.
+
+##### **👑 Owner Role**
+
+**Use Case:** Complete administrative control (original feeder creator)
+**Permissions:**
+
+- ✅ All Manager permissions, plus:
+- ✅ Invite users to any role (including Manager)
+- ✅ Manage all team member permissions
+- ✅ Change user roles (including promoting to Manager)
+- ✅ Remove any team members (including Managers)
+- ✅ Delete the feeder entirely
+
+**Note:** Only one Owner per feeder (the original creator). Cannot be transferred or assigned to multiple users.
+
+#### **Permission Matrix**
+
+| Feature                  | Viewer | Scheduler | Manager | Owner |
+| ------------------------ | ------ | --------- | ------- | ----- |
+| View sensor data         | ✅     | ✅        | ✅      | ✅    |
+| View feeding schedules   | ✅     | ✅        | ✅      | ✅    |
+| View camera feeds        | ✅     | ✅        | ✅      | ✅    |
+| Create feeding schedules | ❌     | ✅        | ✅      | ✅    |
+| Edit feeding schedules   | ❌     | ✅        | ✅      | ✅    |
+| Delete feeding schedules | ❌     | ✅        | ✅      | ✅    |
+| Manual feed release      | ❌     | ✅        | ✅      | ✅    |
+| Edit feeder settings     | ❌     | ❌        | ✅      | ✅    |
+| Invite team members      | ❌     | ❌        | ✅\*    | ✅    |
+| Manage permissions       | ❌     | ❌        | ✅\*    | ✅    |
+
+**\*Manager limitations:** Can only invite/manage Viewers and Schedulers, not other Managers
+
+#### **Team Management Features**
+
 - **Multi-User Access Control:**
-  - Feeder owners can invite team members via email
+  - Feeder owners and managers can invite team members via email
   - Support for users with and without existing accounts
-  - Role-based permissions (Viewer, Scheduler, Manager, Owner)
-  - Fine-grained permission controls for future expansion
+  - Fine-grained permission controls with role templates
 - **Invitation System:**
   - Email-based invitations with secure tokens
   - Auto-signup flow for new users
   - Accept/decline workflow for existing users
   - Time-limited invitation tokens (7 days)
-- **Team Management:**
+- **Team Management Interface:**
   - Member list with role assignments
   - Permission management interface
   - Self-removal capability for team members
   - Audit trail for permission changes
+
+#### **Security & Access Control**
+
+- **Data Isolation:** Row Level Security (RLS) ensures users only access permitted data
+- **Permission Validation:** Server-side permission checks on all operations
+- **Invitation Security:** Time-limited tokens with email verification
+- **Team Boundaries:** Users can be members of multiple teams with different access levels
 
 ### Notifications 🚧 **PARTIAL**
 
