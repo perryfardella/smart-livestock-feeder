@@ -1,5 +1,5 @@
 -- Migration: Create sensor_data table for IoT sensor readings
--- Purpose: Store sensor readings from IoT devices in a normalized format
+-- Purpose: Store sensor readings from IoT devices in a normalised format
 -- Author: System
 -- Date: 2025-06-05
 -- 
@@ -99,7 +99,7 @@ create policy "Allow authenticated delete on sensor_data"
   using (true);
 
 -- Add a comment to the table for documentation
-comment on table public.sensor_data is 'Stores IoT sensor readings in a normalized format where each sensor reading is a separate row';
+comment on table public.sensor_data is 'Stores IoT sensor readings in a normalised format where each sensor reading is a separate row';
 
 -- Add comments to columns for clarity
 comment on column public.sensor_data.device_id is 'Unique identifier for the IoT device sending the sensor data';

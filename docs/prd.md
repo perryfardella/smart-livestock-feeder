@@ -51,7 +51,7 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 - **Live Sensor Dashboard** (Real-time data visualisation)
 - **Manual Feed Release** (MQTT commands)
 - **Device Commissioning Workflow**
-- **Performance-optimized Database Functions**
+- **Performance-optimised Database Functions**
 
 ### 🚧 **In Development**
 
@@ -75,7 +75,7 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 
 ### Secondary Persona
 
-**Sarah** – Retiree who keeps goats and enjoys gardening. Wants to reduce physical workload and monitor feeding while traveling, with real-time alerts for any issues.
+**Sarah** – Retiree who keeps goats and enjoys gardening. Wants to reduce physical workload and monitor feeding while travelling, with real-time alerts for any issues.
 
 ### Admin Persona
 
@@ -124,13 +124,13 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
   - Real-time connection status (online/offline/last communication)
   - Creation date and timezone information
   - Quick access to feeder management
-- Performance-optimized loading with database functions
+- Performance-optimised loading with database functions
 - Responsive design for mobile and desktop
 
 ### Feeder Management ✅ **IMPLEMENTED**
 
 - Users can add new feeders with commissioned device IDs only
-- Device validation prevents unauthorized feeder creation
+- Device validation prevents unauthorised feeder creation
 - Feeder details include:
   - User-friendly name and description
   - Location information
@@ -156,11 +156,11 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 
 ### Sensor Data Dashboard ✅ **IMPLEMENTED**
 
-- **Real-time Data Visualization:**
+- **Real-time Data Visualisation:**
   - Multiple sensor types (temperature, humidity, voltage, battery, etc.)
   - Interactive charts with Recharts library
   - Time-range filtering (daily, weekly, monthly, all-time)
-- **Performance Optimization:**
+- **Performance Optimisation:**
   - Client-side filtering to reduce database load
   - Efficient data caching and updates
   - Responsive chart rendering
@@ -247,7 +247,7 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 
 - Row Level Security (RLS) on all tables
 - Automated timestamp triggers
-- Optimized indexes for query performance
+- Optimised indexes for query performance
 - Device validation functions
 - Admin privilege enforcement
 
@@ -261,7 +261,7 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 - **Language:** TypeScript (strict mode, no 'any' types)
 - **Styling:** Tailwind CSS v4
 - **UI Components:** Shadcn UI (latest)
-- **Charts:** Recharts for data visualization
+- **Charts:** Recharts for data visualisation
 - **Notifications:** Sonner for toast messages
 
 ### Backend & Database
@@ -299,14 +299,14 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 - Row Level Security (RLS) on all database tables
 - JWT-based authentication with secure session management
 - Admin access control via app metadata
-- Device validation preventing unauthorized access
+- Device validation preventing unauthorised access
 - Secure MQTT communication with AWS IoT Core
 
-### Performance Optimizations
+### Performance Optimisations
 
 - Database functions for complex queries
 - Client-side data filtering and caching
-- Optimized component loading with React Suspense
+- Optimised component loading with React Suspense
 - Efficient indexing strategy
 - Performance monitoring with Vercel Analytics
 
@@ -340,7 +340,7 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 ## Features Out of Scope
 
 - Third-party weather service integration
-- Advanced animal behavior analytics
+- Advanced animal behaviour analytics
 - Dedicated mobile app (focus on responsive web app)
 - Video recording and storage
 - Multi-tenant architecture (single-user feeders only)
@@ -374,7 +374,7 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 ## Q&A
 
 **Q:** Can the app be used on mobile devices?  
-**A:** Yes, the web app is fully responsive and optimized for mobile use.
+**A:** Yes, the web app is fully responsive and optimised for mobile use.
 
 **Q:** How secure is the IoT communication?  
 **A:** All MQTT communication is secured through AWS IoT Core with Cognito authentication and encrypted channels.
@@ -389,7 +389,7 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 
 ## Other Considerations
 
-- Prioritize accessibility for non-tech-savvy users
+- Prioritise accessibility for non-tech-savvy users
 - Maintain scalability for growing user base and device inventory
 - Ensure 99.9% uptime for critical feeding operations
 - Plan for international expansion beyond Australia

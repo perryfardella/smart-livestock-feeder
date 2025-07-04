@@ -1,5 +1,5 @@
 -- Migration: Add function to get feeders with connection status efficiently
--- Purpose: Optimize dashboard loading by calculating feeder status at database level
+-- Purpose: Optimise dashboard loading by calculating feeder status at database level
 -- Author: System
 -- Date: 2025-07-01
 

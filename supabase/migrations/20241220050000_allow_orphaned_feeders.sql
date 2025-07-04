@@ -58,7 +58,7 @@ create policy "Users can reclaim orphaned feeders"
   using (user_id is null)
   with check (auth.uid() = user_id);
 
--- Update column comment to reflect new nullable behavior
+-- Update column comment to reflect new nullable behaviour
 comment on column public.feeders.user_id is 'The user who owns this feeder (nullable to support orphaned feeders after soft delete)';
 
 -- Add index for orphaned feeders queries
