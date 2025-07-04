@@ -270,6 +270,7 @@ export function PermissionsManagement({
           <TabsContent value="invite" className="space-y-4">
             <InviteUserForm
               feederId={feederId}
+              currentUserRole={currentUserRole!}
               onInviteSent={handleDataRefresh}
             />
           </TabsContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,10 +18,10 @@ import {
   type FeederRole,
   getInvitableRoles,
 } from "@/lib/utils/permissions-client";
-import { createClient } from "@/lib/supabase/client";
 
 interface InviteUserFormProps {
   feederId: string;
+  currentUserRole: FeederRole;
   onInviteSent?: () => void;
 }
 
@@ -41,53 +41,18 @@ const ROLES = [
 
 export function InviteUserForm({
   feederId,
+  currentUserRole,
   onInviteSent,
 }: InviteUserFormProps) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<FeederRole>("viewer");
   const [isLoading, setIsLoading] = useState(false);
-  const [availableRoles, setAvailableRoles] = useState<
-    Array<{ value: FeederRole; label: string }>
-  >([]);
 
-  // Get current user's role and determine what roles they can invite
-  useEffect(() => {
-    const getCurrentUserRole = async () => {
-      try {
-        const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (user) {
-          // Get user's role for this feeder
-          const response = await fetch(`/api/feeders/${feederId}/role`);
-          if (response.ok) {
-            const data = await response.json();
-            const userRole = data.role as FeederRole;
-
-            // Get the roles this user can invite
-            const invitableRoles = getInvitableRoles(userRole);
-            const filteredRoles = ROLES.filter((roleOption) =>
-              invitableRoles.includes(roleOption.value)
-            );
-            setAvailableRoles(filteredRoles);
-
-            // Reset role to first available option if current selection is not allowed
-            if (filteredRoles.length > 0 && !invitableRoles.includes(role)) {
-              setRole(filteredRoles[0].value);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error getting user role:", error);
-        // Default to viewer only if error occurs
-        setAvailableRoles([{ value: "viewer", label: "Viewer" }]);
-      }
-    };
-
-    getCurrentUserRole();
-  }, [feederId, role]);
+  // Get the roles this user can invite based on their current role
+  const invitableRoles = getInvitableRoles(currentUserRole);
+  const availableRoles = ROLES.filter((roleOption) =>
+    invitableRoles.includes(roleOption.value)
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
