@@ -43,11 +43,10 @@ interface FeederMember {
   user_id: string;
   role: FeederRole;
   status: string;
-  invited_at: string;
-  accepted_at?: string;
-  profiles?: {
-    email: string;
-  };
+  invited_at: string | null;
+  accepted_at?: string | null;
+  email?: string | null;
+  is_owner?: boolean;
 }
 
 interface FeederMembersListProps {
@@ -82,6 +81,14 @@ export function FeederMembersList({
   const canManageMembers =
     currentUserRole === "owner" || currentUserRole === "manager";
 
+  // Helper function to get user email from profiles array
+  const getUserEmail = (member: FeederMember): string => {
+    if (member.email) {
+      return member.email;
+    }
+    return `User ${member.user_id.slice(0, 8)}...`;
+  };
+
   useEffect(() => {
     loadMembers();
   }, [feederId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -103,6 +110,13 @@ export function FeederMembersList({
   };
 
   const handleRoleChange = async (memberId: string, newRole: FeederRole) => {
+    // Safety check: prevent role changes for owners
+    const member = members.find((m) => m.id === memberId);
+    if (member && (member.is_owner || member.role === "owner")) {
+      toast.error("Cannot change role for feeder owner");
+      return;
+    }
+
     setUpdatingMemberId(memberId);
 
     try {
@@ -127,6 +141,13 @@ export function FeederMembersList({
   };
 
   const handleRemoveMember = async (memberId: string, memberEmail: string) => {
+    // Safety check: prevent removal for owners
+    const member = members.find((m) => m.id === memberId);
+    if (member && (member.is_owner || member.role === "owner")) {
+      toast.error("Cannot remove feeder owner from team");
+      return;
+    }
+
     setUpdatingMemberId(memberId);
 
     try {
@@ -170,17 +191,70 @@ export function FeederMembersList({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          Team Members ({members.length})
+          Team Members ({members.length} total)
         </CardTitle>
       </CardHeader>
       <CardContent>
         {members.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>No team members yet</p>
+            <p>Loading team members...</p>
             <p className="text-sm">
-              Invite team members to start collaborating
+              Please wait while we load the team information
             </p>
+          </div>
+        ) : members.length === 1 && members[0]?.is_owner ? (
+          <div className="space-y-4">
+            {members.map((member) => {
+              const RoleIcon = ROLE_ICONS[member.role];
+              const isUpdating = updatingMemberId === member.id;
+
+              return (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
+                      <RoleIcon className="h-5 w-5 text-gray-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {getUserEmail(member)}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge className={ROLE_COLORS[member.role]}>
+                          {member.role}
+                        </Badge>
+                        {member.accepted_at && !member.is_owner && (
+                          <span className="text-xs text-gray-500">
+                            Joined{" "}
+                            {new Date(member.accepted_at).toLocaleDateString()}
+                          </span>
+                        )}
+                        {member.is_owner && (
+                          <span className="text-xs text-gray-500">
+                            Feeder Owner
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {isUpdating && (
+                    <div className="text-sm text-gray-500">Updating...</div>
+                  )}
+                </div>
+              );
+            })}
+
+            <div className="text-center py-6 text-gray-500 border-t">
+              <Users className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+              <p className="text-sm">Only the owner is in this team</p>
+              <p className="text-xs">
+                Invite team members to start collaborating
+              </p>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -199,94 +273,105 @@ export function FeederMembersList({
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">
-                        {member.profiles?.email ||
-                          `User ${member.user_id.slice(0, 8)}...`}
+                        {getUserEmail(member)}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge className={ROLE_COLORS[member.role]}>
                           {member.role}
                         </Badge>
-                        {member.accepted_at && (
+                        {member.accepted_at && !member.is_owner && (
                           <span className="text-xs text-gray-500">
                             Joined{" "}
                             {new Date(member.accepted_at).toLocaleDateString()}
+                          </span>
+                        )}
+                        {member.is_owner && (
+                          <span className="text-xs text-gray-500">
+                            Feeder Owner
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {canManageMembers && member.role !== "owner" && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" disabled={isUpdating}>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleRoleChange(member.id, "viewer")}
-                          disabled={member.role === "viewer"}
-                        >
-                          Change to Viewer
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            handleRoleChange(member.id, "scheduler")
-                          }
-                          disabled={member.role === "scheduler"}
-                        >
-                          Change to Scheduler
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleRoleChange(member.id, "manager")}
-                          disabled={member.role === "manager"}
-                        >
-                          Change to Manager
-                        </DropdownMenuItem>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-600"
-                              onSelect={(e: Event) => e.preventDefault()}
-                            >
-                              <UserMinus className="h-4 w-4 mr-2" />
-                              Remove from team
-                            </DropdownMenuItem>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                Remove team member
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to remove{" "}
-                                {member.profiles?.email ||
-                                  `User ${member.user_id.slice(0, 8)}...`}{" "}
-                                from this feeder? They will lose all access
-                                immediately.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() =>
-                                  handleRemoveMember(
-                                    member.id,
-                                    member.profiles?.email ||
-                                      `User ${member.user_id.slice(0, 8)}...`
-                                  )
-                                }
-                                className="bg-red-600 hover:bg-red-700"
+                  {canManageMembers &&
+                    member.role !== "owner" &&
+                    !member.is_owner && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={isUpdating}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleRoleChange(member.id, "viewer")
+                            }
+                            disabled={member.role === "viewer"}
+                          >
+                            Change to Viewer
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleRoleChange(member.id, "scheduler")
+                            }
+                            disabled={member.role === "scheduler"}
+                          >
+                            Change to Scheduler
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleRoleChange(member.id, "manager")
+                            }
+                            disabled={member.role === "manager"}
+                          >
+                            Change to Manager
+                          </DropdownMenuItem>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onSelect={(e: Event) => e.preventDefault()}
                               >
-                                Remove
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                                <UserMinus className="h-4 w-4 mr-2" />
+                                Remove from team
+                              </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Remove team member
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to remove{" "}
+                                  {getUserEmail(member)} from this feeder? They
+                                  will lose all access immediately.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() =>
+                                    handleRemoveMember(
+                                      member.id,
+                                      getUserEmail(member)
+                                    )
+                                  }
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Remove
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
 
                   {isUpdating && (
                     <div className="text-sm text-gray-500">Updating...</div>

@@ -768,15 +768,41 @@ export async function getFeederMemberships(feederId: string) {
       return { success: false, error: "Access denied", memberships: [] };
     }
 
-    const { data: memberships, error } = await supabase
+    // Get the feeder owner information
+    const { data: feederData, error: feederError } = await supabase
+      .from("feeders")
+      .select("user_id, name")
+      .eq("id", feederId)
+      .single();
+
+    if (feederError) {
+      console.error("Error fetching feeder owner:", feederError);
+      return {
+        success: false,
+        error: "Failed to fetch feeder information",
+        memberships: [],
+      };
+    }
+
+    // Get team members from feeder_memberships
+    const { data: memberships, error: membershipsError } = await supabase
       .from("feeder_memberships")
-      .select("*")
+      .select(
+        `
+        id,
+        user_id,
+        role,
+        status,
+        invited_at,
+        accepted_at
+      `
+      )
       .eq("feeder_id", feederId)
       .eq("status", "accepted")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching feeder memberships:", error);
+    if (membershipsError) {
+      console.error("Error fetching feeder memberships:", membershipsError);
       return {
         success: false,
         error: "Failed to fetch memberships",
@@ -784,7 +810,62 @@ export async function getFeederMemberships(feederId: string) {
       };
     }
 
-    return { success: true, memberships };
+    // Collect all user IDs to fetch emails for
+    const userIds = [feederData.user_id];
+    if (memberships) {
+      userIds.push(...memberships.map((m) => m.user_id));
+    }
+
+    // Fetch user emails using auth admin (this requires service role key)
+    const userEmails: Record<string, string> = {};
+
+    try {
+      // Get emails from auth.users using a security definer function
+      const { data: userEmailData, error: emailError } = await supabase.rpc(
+        "get_user_emails",
+        { user_ids: userIds }
+      );
+
+      if (emailError) {
+        console.error("Error fetching user emails:", emailError);
+        // Continue without emails rather than failing completely
+      } else if (userEmailData) {
+        userEmailData.forEach((item: { user_id: string; email: string }) => {
+          userEmails[item.user_id] = item.email;
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching user emails:", error);
+      // Continue without emails rather than failing completely
+    }
+
+    // Create a combined list with owner first
+    const allMembers = [];
+
+    // Add the owner as the first member
+    allMembers.push({
+      id: `owner-${feederData.user_id}`, // Unique ID for owner
+      user_id: feederData.user_id,
+      role: "owner" as const,
+      status: "accepted" as const,
+      invited_at: null, // Owners aren't invited
+      accepted_at: null, // Owners don't accept invitations
+      email: userEmails[feederData.user_id] || null,
+      is_owner: true,
+    });
+
+    // Add team members
+    if (memberships) {
+      memberships.forEach((membership) => {
+        allMembers.push({
+          ...membership,
+          email: userEmails[membership.user_id] || null,
+          is_owner: false,
+        });
+      });
+    }
+
+    return { success: true, memberships: allMembers };
   } catch (error) {
     console.error("Error getting feeder memberships:", error);
     return {
