@@ -84,6 +84,8 @@ export interface FeederWithConnection extends Feeder {
 
 export interface FeederWithStatus extends Feeder {
   status: FeederStatus;
+  user_role?: string;
+  is_owner?: boolean;
 }
 
 export async function getUserFeedersWithConnectionStatus(): Promise<
@@ -266,6 +268,8 @@ export async function getUserFeedersWithStatusDB(): Promise<
       settings: row.settings,
       created_at: row.created_at,
       updated_at: row.updated_at,
+      user_role: row.user_role,
+      is_owner: row.is_owner,
       status: {
         status: row.status as "online" | "offline",
         isOnline: row.is_online,
