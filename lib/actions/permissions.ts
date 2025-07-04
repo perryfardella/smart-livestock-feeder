@@ -35,21 +35,19 @@ async function sendInvitationEmail(
     const supabase = await createClient();
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-    // Check if user already exists
-    const { data: existingUser } = await supabase
-      .from("auth.users")
-      .select("id")
-      .eq("email", inviteeEmail)
-      .single();
+    // Check if user already exists using the security definer function
+    const { data: userExists } = await supabase.rpc("user_exists_by_email", {
+      email_param: inviteeEmail,
+    });
 
-    if (existingUser) {
+    if (userExists) {
       // Existing user - send invitation acceptance email
       const acceptUrl = `${baseUrl}/invitations/accept?token=${invitationToken}`;
 
       const { data, error } = await resend.emails.send({
         from: "Smart Livestock Feeder <noreply@invite.smartfeeder.farm>",
         to: [inviteeEmail],
-        subject: `Invitation to join ${feederName}`,
+        subject: `Invitation to join ${feederName} team`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #2563eb;">You've been invited to join a feeder team!</h2>
@@ -90,6 +88,10 @@ async function sendInvitationEmail(
             </div>
             
             <p style="color: #6b7280; font-size: 14px;">
+              Since you already have a Smart Livestock Feeder account, simply click the button above to accept this invitation and start collaborating with your team.
+            </p>
+            
+            <p style="color: #6b7280; font-size: 14px;">
               This invitation will expire in 7 days. If you don't want to join this team, you can safely ignore this email.
             </p>
             
@@ -116,7 +118,7 @@ async function sendInvitationEmail(
       const { data, error } = await resend.emails.send({
         from: "Smart Livestock Feeder <noreply@invite.smartfeeder.farm>",
         to: [inviteeEmail],
-        subject: `You're invited to join ${feederName}`,
+        subject: `You're invited to join ${feederName} - Create your account`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #2563eb;">Welcome to Smart Livestock Feeder!</h2>
@@ -163,6 +165,10 @@ async function sendInvitationEmail(
                 Create Account & Join Team
               </a>
             </div>
+            
+            <p style="color: #6b7280; font-size: 14px;">
+              Don't have an account yet? No problem! Click the button above to create your free account and automatically join the team.
+            </p>
             
             <p style="color: #6b7280; font-size: 14px;">
               This invitation will expire in 7 days. If you don't want to join this team, you can safely ignore this email.
@@ -344,15 +350,8 @@ export async function inviteUserToFeeder(data: InviteUserToFeederData) {
       .eq("id", data.feeder_id)
       .single();
 
-    const { data: inviterData } = await supabase
-      .from("auth.users")
-      .select("raw_user_meta_data")
-      .eq("id", user.id)
-      .single();
-
     const feederName = feederData?.name || "Smart Livestock Feeder";
-    const inviterName =
-      inviterData?.raw_user_meta_data?.full_name || user.email || "Someone";
+    const inviterName = user.email || "Someone";
 
     // Send invitation email using Resend via Supabase SMTP
     await sendInvitationEmail(
@@ -715,15 +714,8 @@ export async function resendInvitation(invitationId: string) {
       .eq("id", invitation.feeder_id)
       .single();
 
-    const { data: inviterData } = await supabase
-      .from("auth.users")
-      .select("raw_user_meta_data")
-      .eq("id", user.id)
-      .single();
-
     const feederName = feederData?.name || "Smart Livestock Feeder";
-    const inviterName =
-      inviterData?.raw_user_meta_data?.full_name || user.email || "Someone";
+    const inviterName = user.email || "Someone";
 
     // Send fresh invitation email
     await sendInvitationEmail(
