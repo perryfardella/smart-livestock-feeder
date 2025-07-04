@@ -48,7 +48,7 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 - **Admin Portal & Device Management**
 - **Real-time IoT Integration** (AWS IoT Core)
 - **Advanced Feeding Schedules** (Multiple sessions, complex intervals)
-- **Live Sensor Dashboard** (Real-time data visualization)
+- **Live Sensor Dashboard** (Real-time data visualisation)
 - **Manual Feed Release** (MQTT commands)
 - **Device Commissioning Workflow**
 - **Performance-optimized Database Functions**
@@ -285,6 +285,10 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
 - **Analytics:** Vercel Analytics
 - **Version Control:** Git with Husky pre-commit hooks
 - **Testing:** Jest for unit tests
+
+### Language
+
+- The project will use Australian English for all spelling, etc.
 
 ---
 

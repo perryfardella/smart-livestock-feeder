@@ -8,6 +8,7 @@ import {
   PublishCommand,
 } from "@aws-sdk/client-iot-data-plane";
 import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
+import { hasFeederPermission } from "@/lib/utils/permissions";
 
 export type FeedingSession = {
   id?: string;
@@ -238,6 +239,8 @@ export async function getFeedingSchedules(feederId?: string) {
     }
 
     // Build query for feeding schedules with sessions
+    // Note: RLS policies will automatically filter to only show schedules
+    // the user has permission to view (owned schedules + shared schedules)
     let query = supabase
       .from("feeding_schedules")
       .select(
@@ -250,7 +253,6 @@ export async function getFeedingSchedules(feederId?: string) {
         )
       `
       )
-      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     // Filter by feeder if specified
@@ -269,66 +271,51 @@ export async function getFeedingSchedules(feederId?: string) {
       };
     }
 
-    // Transform the data to match the frontend types
-    const transformedSchedules =
-      schedules
-        ?.filter((schedule) => {
-          // Validate start_date
-          if (!schedule.start_date) {
-            console.warn(
-              `❌ Schedule ${schedule.id} has null/undefined start_date`
-            );
-            return false;
-          }
-          const startDate = new Date(schedule.start_date);
-          if (isNaN(startDate.getTime())) {
-            console.warn(
-              `❌ Schedule ${schedule.id} has invalid start_date: ${schedule.start_date}`
-            );
-            return false;
-          }
-          return true;
-        })
-        .map((schedule) => {
-          const startDate = new Date(schedule.start_date);
-          const endDate = schedule.end_date
-            ? (() => {
-                const endDate = new Date(schedule.end_date);
-                return isNaN(endDate.getTime()) ? undefined : endDate;
-              })()
-            : undefined;
+    // Transform the data to match the expected format
+    const transformedSchedules: FeedingSchedule[] = (schedules || []).map(
+      (schedule: {
+        id: string;
+        feeder_id: string;
+        user_id: string;
+        start_date: string;
+        end_date: string | null;
+        interval: string;
+        days_of_week: number[];
+        created_at: string;
+        updated_at: string;
+        feeding_sessions: Array<{
+          id: string;
+          time: string;
+          feed_amount: string;
+        }>;
+      }) => ({
+        id: schedule.id,
+        feederId: schedule.feeder_id,
+        startDate: new Date(schedule.start_date),
+        endDate: schedule.end_date ? new Date(schedule.end_date) : undefined,
+        interval: schedule.interval as
+          | "daily"
+          | "weekly"
+          | "biweekly"
+          | "four-weekly",
+        daysOfWeek: schedule.days_of_week || [],
+        sessions: schedule.feeding_sessions.map((session) => ({
+          id: session.id,
+          time: session.time,
+          feedAmount: parseFloat(session.feed_amount),
+        })),
+      })
+    );
 
-          return {
-            id: schedule.id,
-            feederId: schedule.feeder_id,
-            startDate,
-            endDate,
-            interval: schedule.interval,
-            daysOfWeek: schedule.days_of_week || [],
-            sessions:
-              schedule.feeding_sessions?.map(
-                (session: {
-                  id: string;
-                  time: string;
-                  feed_amount: string;
-                }) => ({
-                  id: session.id,
-                  time: session.time,
-                  feedAmount: parseFloat(session.feed_amount),
-                })
-              ) || [],
-          };
-        }) || [];
-
-    return { success: true, schedules: transformedSchedules };
+    return {
+      success: true,
+      schedules: transformedSchedules,
+    };
   } catch (error) {
-    console.error("Error fetching feeding schedules:", error);
+    console.error("Error in getFeedingSchedules:", error);
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch feeding schedules",
+      error: "Failed to fetch feeding schedules",
       schedules: [],
     };
   }
@@ -353,18 +340,18 @@ export async function createFeedingSchedule(
       };
     }
 
-    // Verify user owns the feeder
-    const { data: feeder, error: feederError } = await supabase
-      .from("feeders")
-      .select("id")
-      .eq("id", schedule.feederId)
-      .eq("user_id", user.id)
-      .single();
+    // Check if user has permission to create feeding schedules for this feeder
+    const canCreateSchedules = await hasFeederPermission(
+      schedule.feederId,
+      "create_feeding_schedules",
+      user.id
+    );
 
-    if (feederError || !feeder) {
+    if (!canCreateSchedules) {
       return {
         success: false,
-        error: "Feeder not found or access denied",
+        error:
+          "Access denied: You don't have permission to create feeding schedules for this feeder",
       };
     }
 
@@ -475,18 +462,32 @@ export async function updateFeedingSchedule(
       };
     }
 
-    // Verify user owns the schedule
+    // Get the existing schedule to check permissions
     const { data: existingSchedule, error: scheduleError } = await supabase
       .from("feeding_schedules")
       .select("id, feeder_id")
       .eq("id", scheduleId)
-      .eq("user_id", user.id)
       .single();
 
     if (scheduleError || !existingSchedule) {
       return {
         success: false,
-        error: "Feeding schedule not found or access denied",
+        error: "Feeding schedule not found",
+      };
+    }
+
+    // Check if user has permission to edit feeding schedules for this feeder
+    const canEditSchedules = await hasFeederPermission(
+      existingSchedule.feeder_id,
+      "edit_feeding_schedules",
+      user.id
+    );
+
+    if (!canEditSchedules) {
+      return {
+        success: false,
+        error:
+          "Access denied: You don't have permission to edit feeding schedules for this feeder",
       };
     }
 
@@ -596,12 +597,40 @@ export async function deleteFeedingSchedule(
       };
     }
 
-    // Verify user owns the schedule and delete it
+    // Get the schedule to check permissions
+    const { data: scheduleToDelete, error: fetchError } = await supabase
+      .from("feeding_schedules")
+      .select("id, feeder_id")
+      .eq("id", scheduleId)
+      .single();
+
+    if (fetchError || !scheduleToDelete) {
+      return {
+        success: false,
+        error: "Feeding schedule not found",
+      };
+    }
+
+    // Check if user has permission to delete feeding schedules for this feeder
+    const canDeleteSchedules = await hasFeederPermission(
+      scheduleToDelete.feeder_id,
+      "delete_feeding_schedules",
+      user.id
+    );
+
+    if (!canDeleteSchedules) {
+      return {
+        success: false,
+        error:
+          "Access denied: You don't have permission to delete feeding schedules for this feeder",
+      };
+    }
+
+    // Delete the schedule (RLS will provide additional safety)
     const { error: deleteError } = await supabase
       .from("feeding_schedules")
       .delete()
-      .eq("id", scheduleId)
-      .eq("user_id", user.id);
+      .eq("id", scheduleId);
 
     if (deleteError) {
       console.error("Error deleting feeding schedule:", deleteError);

@@ -419,24 +419,114 @@ export async function acceptInvitation(invitationToken: string) {
       return { success: false, error: "Authentication required" };
     }
 
+    console.log(`🎫 Accepting invitation with token: ${invitationToken}`);
+
     // Use the database function to accept invitation
     const { data, error } = await supabase.rpc("accept_invitation", {
       invitation_token_param: invitationToken,
     });
 
     if (error) {
-      console.error("Error accepting invitation:", error);
+      console.error("❌ Error accepting invitation:", error);
       return { success: false, error: "Failed to accept invitation" };
     }
 
     if (!data) {
+      console.log("❌ Invitation not found or expired");
       return { success: false, error: "Invitation not found or expired" };
+    }
+
+    console.log("✅ Invitation accepted successfully");
+
+    // Get the newly created membership to verify permissions were applied
+    const { data: membership } = await supabase
+      .from("feeder_memberships")
+      .select("id, role, feeder_id")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (membership) {
+      console.log(
+        `🔍 Checking permissions for membership ${membership.id} with role ${membership.role}`
+      );
+
+      // Check if permissions were properly applied
+      const { data: permissions } = await supabase
+        .from("feeder_permissions")
+        .select("permission_type, granted")
+        .eq("membership_id", membership.id)
+        .eq("granted", true);
+
+      const grantedPermissions =
+        permissions?.map((p) => p.permission_type) || [];
+      console.log(`🔒 Currently granted permissions:`, grantedPermissions);
+
+      // Define expected permissions for each role
+      const expectedPermissions = {
+        viewer: [
+          "view_sensor_data",
+          "view_feeding_schedules",
+          "view_camera_feeds",
+        ],
+        scheduler: [
+          "view_sensor_data",
+          "view_feeding_schedules",
+          "create_feeding_schedules",
+          "edit_feeding_schedules",
+          "delete_feeding_schedules",
+          "manual_feed_release",
+          "view_camera_feeds",
+        ],
+        manager: [
+          "view_sensor_data",
+          "view_feeding_schedules",
+          "create_feeding_schedules",
+          "edit_feeding_schedules",
+          "delete_feeding_schedules",
+          "manual_feed_release",
+          "view_camera_feeds",
+          "edit_feeder_settings",
+        ],
+        owner: [], // Owners get permissions through feeder ownership, not membership
+      };
+
+      const expected =
+        expectedPermissions[
+          membership.role as keyof typeof expectedPermissions
+        ] || [];
+      const missing = expected.filter(
+        (perm) => !grantedPermissions.includes(perm)
+      );
+
+      if (missing.length > 0 && membership.role !== "owner") {
+        console.log(`⚠️ Missing permissions detected:`, missing);
+        console.log(`🔧 Attempting to fix by re-applying role permissions...`);
+
+        // Try to fix by re-applying role permissions
+        const { error: fixError } = await supabase.rpc(
+          "apply_role_permissions",
+          {
+            membership_id_param: membership.id,
+            role_param: membership.role,
+          }
+        );
+
+        if (fixError) {
+          console.error("❌ Failed to fix permissions:", fixError);
+        } else {
+          console.log("✅ Successfully re-applied role permissions");
+        }
+      } else {
+        console.log("✅ All expected permissions are properly applied");
+      }
     }
 
     revalidatePath("/dashboard");
     return { success: true, message: "Invitation accepted successfully" };
   } catch (error) {
-    console.error("Error accepting invitation:", error);
+    console.error("💥 Error accepting invitation:", error);
     return { success: false, error: "Failed to accept invitation" };
   }
 }
@@ -755,6 +845,10 @@ export async function updateMembership(data: UpdateMembershipData) {
 
     // If role was updated, apply role permissions
     if (data.role) {
+      console.log(
+        `🔄 Updating role to ${data.role} for membership ${data.membership_id}`
+      );
+
       const { error: roleError } = await supabase.rpc(
         "apply_role_permissions",
         {
@@ -764,7 +858,22 @@ export async function updateMembership(data: UpdateMembershipData) {
       );
 
       if (roleError) {
-        console.error("Error applying role permissions:", roleError);
+        console.error("❌ Error applying role permissions:", roleError);
+        // Don't fail the membership update if permission application fails
+        // The user can always fix permissions later
+      } else {
+        console.log("✅ Successfully applied role permissions");
+
+        // Verify permissions were applied correctly
+        const { data: permissions } = await supabase
+          .from("feeder_permissions")
+          .select("permission_type, granted")
+          .eq("membership_id", data.membership_id)
+          .eq("granted", true);
+
+        const grantedPermissions =
+          permissions?.map((p) => p.permission_type) || [];
+        console.log(`🔒 Applied permissions:`, grantedPermissions);
       }
     }
 
@@ -952,5 +1061,179 @@ export async function getMembershipPermissions(membershipId: string) {
       error: "Failed to fetch permissions",
       permissions: [],
     };
+  }
+}
+
+// ============================================================================
+// PERMISSION HEALTH CHECK AND REPAIR
+// ============================================================================
+
+/**
+ * Check and fix permissions for all memberships with missing permissions
+ * This can be called periodically or when issues are detected
+ */
+export async function fixMembershipPermissions(feederId?: string) {
+  try {
+    const supabase = await createClient();
+
+    // Get current user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return { success: false, error: "Authentication required" };
+    }
+
+    console.log("🔧 Starting permission health check...");
+
+    // Build query to get memberships
+    let query = supabase
+      .from("feeder_memberships")
+      .select(
+        `
+        id,
+        feeder_id,
+        user_id,
+        role,
+        status,
+        feeder_permissions (
+          permission_type,
+          granted
+        )
+      `
+      )
+      .eq("status", "accepted")
+      .neq("role", "owner"); // Owners don't need explicit permissions
+
+    // Filter by feeder if specified
+    if (feederId) {
+      query = query.eq("feeder_id", feederId);
+    }
+
+    const { data: memberships, error: membershipError } = await query;
+
+    if (membershipError) {
+      console.error("❌ Error fetching memberships:", membershipError);
+      return { success: false, error: "Failed to fetch memberships" };
+    }
+
+    console.log(`🔍 Checking ${memberships?.length || 0} memberships...`);
+
+    const expectedPermissions = {
+      viewer: [
+        "view_sensor_data",
+        "view_feeding_schedules",
+        "view_camera_feeds",
+      ],
+      scheduler: [
+        "view_sensor_data",
+        "view_feeding_schedules",
+        "create_feeding_schedules",
+        "edit_feeding_schedules",
+        "delete_feeding_schedules",
+        "manual_feed_release",
+        "view_camera_feeds",
+      ],
+      manager: [
+        "view_sensor_data",
+        "view_feeding_schedules",
+        "create_feeding_schedules",
+        "edit_feeding_schedules",
+        "delete_feeding_schedules",
+        "manual_feed_release",
+        "view_camera_feeds",
+        "edit_feeder_settings",
+      ],
+    };
+
+    const results = [];
+
+    for (const membership of memberships || []) {
+      const expected =
+        expectedPermissions[
+          membership.role as keyof typeof expectedPermissions
+        ] || [];
+      const current =
+        membership.feeder_permissions
+          ?.filter(
+            (p: { permission_type: string; granted: boolean }) => p.granted
+          )
+          .map(
+            (p: { permission_type: string; granted: boolean }) =>
+              p.permission_type
+          ) || [];
+
+      const missing = expected.filter((perm) => !current.includes(perm));
+
+      if (missing.length > 0) {
+        console.log(
+          `⚠️ Membership ${membership.id} (${membership.role}) missing permissions:`,
+          missing
+        );
+
+        // Try to fix by applying role permissions
+        const { error: fixError } = await supabase.rpc(
+          "apply_role_permissions",
+          {
+            membership_id_param: membership.id,
+            role_param: membership.role,
+          }
+        );
+
+        if (fixError) {
+          console.error(
+            `❌ Failed to fix membership ${membership.id}:`,
+            fixError
+          );
+          results.push({
+            membership_id: membership.id,
+            role: membership.role,
+            missing_permissions: missing,
+            fixed: false,
+            error: fixError.message,
+          });
+        } else {
+          console.log(`✅ Fixed permissions for membership ${membership.id}`);
+          results.push({
+            membership_id: membership.id,
+            role: membership.role,
+            missing_permissions: missing,
+            fixed: true,
+          });
+        }
+      } else {
+        results.push({
+          membership_id: membership.id,
+          role: membership.role,
+          missing_permissions: [],
+          fixed: false, // No fix needed
+          status: "healthy",
+        });
+      }
+    }
+
+    const fixedCount = results.filter((r) => r.fixed).length;
+    const errorCount = results.filter((r) => r.error).length;
+    const healthyCount = results.filter((r) => r.status === "healthy").length;
+
+    console.log(`🎯 Permission health check complete:`);
+    console.log(`   - ${healthyCount} memberships healthy`);
+    console.log(`   - ${fixedCount} memberships fixed`);
+    console.log(`   - ${errorCount} memberships with errors`);
+
+    return {
+      success: true,
+      results,
+      summary: {
+        total: results.length,
+        healthy: healthyCount,
+        fixed: fixedCount,
+        errors: errorCount,
+      },
+    };
+  } catch (error) {
+    console.error("💥 Error in permission health check:", error);
+    return { success: false, error: "Failed to run health check" };
   }
 }
