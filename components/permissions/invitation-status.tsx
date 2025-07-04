@@ -5,12 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -22,15 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import {
-  MailIcon,
-  MoreHorizontal,
-  X,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Send,
-} from "lucide-react";
+import { MailIcon, X, Clock, CheckCircle, XCircle, Send } from "lucide-react";
 import { type FeederRole } from "@/lib/utils/permissions-client";
 
 interface FeederInvitation {
@@ -257,56 +243,46 @@ export function InvitationStatus({
                       </Button>
                     )}
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           disabled={revokingId === invitation.id}
                         >
-                          <MoreHorizontal className="h-4 w-4" />
+                          <X className="h-4 w-4 mr-2" />
+                          {revokingId === invitation.id
+                            ? "Revoking..."
+                            : "Revoke"}
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <DropdownMenuItem
-                              onSelect={(e) => e.preventDefault()}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <X className="h-4 w-4 mr-2" />
-                              Revoke invitation
-                            </DropdownMenuItem>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                Revoke invitation to {invitation.invitee_email}?
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to revoke this invitation?
-                                The recipient will no longer be able to accept
-                                it.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() =>
-                                  handleRevokeInvitation(
-                                    invitation.id,
-                                    invitation.invitee_email
-                                  )
-                                }
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                Revoke Invitation
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Revoke invitation to {invitation.invitee_email}?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to revoke this invitation? The
+                            recipient will no longer be able to accept it.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() =>
+                              handleRevokeInvitation(
+                                invitation.id,
+                                invitation.invitee_email
+                              )
+                            }
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Revoke Invitation
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               );
