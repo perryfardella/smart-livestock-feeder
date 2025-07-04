@@ -464,14 +464,16 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
 
         {/* Status Cards */}
         <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              {feederStatus?.status === "online" ? (
-                <RefreshCw className="h-8 w-8 text-green-500" />
-              ) : (
-                <RefreshCw className="h-8 w-8 text-red-500" />
-              )}
-              <div>
+          <Card className="p-6 min-h-[120px]">
+            <div className="h-full flex items-center gap-4">
+              <div className="flex items-center justify-center w-8 h-8 flex-shrink-0">
+                {feederStatus?.status === "online" ? (
+                  <RefreshCw className="h-8 w-8 text-green-500" />
+                ) : (
+                  <RefreshCw className="h-8 w-8 text-red-500" />
+                )}
+              </div>
+              <div className="flex-1">
                 <p className="text-sm text-gray-600">Status</p>
                 <div>
                   {feederStatus ? (
@@ -505,10 +507,12 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
             </div>
           </Card>
 
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <RefreshCw className="h-8 w-8 text-blue-500" />
-              <div>
+          <Card className="p-6 min-h-[120px]">
+            <div className="h-full flex items-center gap-4">
+              <div className="flex items-center justify-center w-8 h-8 flex-shrink-0">
+                <RefreshCw className="h-8 w-8 text-blue-500" />
+              </div>
+              <div className="flex-1">
                 <p className="text-sm text-gray-600">Device ID</p>
                 <p className="text-lg font-semibold font-mono">
                   {feeder.device_id}
@@ -517,10 +521,12 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
             </div>
           </Card>
 
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <Globe className="h-8 w-8 text-purple-500" />
-              <div>
+          <Card className="p-6 min-h-[120px]">
+            <div className="h-full flex items-center gap-4">
+              <div className="flex items-center justify-center w-8 h-8 flex-shrink-0">
+                <Globe className="h-8 w-8 text-purple-500" />
+              </div>
+              <div className="flex-1">
                 <p className="text-sm text-gray-600">Timezone</p>
                 <p className="text-lg font-semibold">
                   {feeder.timezone.replace("_", " ")}
