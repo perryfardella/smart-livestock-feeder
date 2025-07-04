@@ -52,18 +52,30 @@ export async function getUserFeeders(): Promise<Feeder[]> {
     redirect("/auth/login");
   }
 
-  const { data, error } = await supabase
-    .from("feeders")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  // Use the RPC function to get both owned and shared feeders
+  const { data: rpcData, error: rpcError } = await supabase.rpc(
+    "get_user_feeders_with_status"
+  );
 
-  if (error) {
-    console.error("Error fetching feeders:", error);
+  if (rpcError) {
+    console.error("Error fetching feeders with RPC:", rpcError);
     throw new Error("Failed to fetch feeders");
   }
 
-  return data || [];
+  // Extract just the feeder data without status info
+  return (rpcData || []).map((row: DBFeederWithStatus) => ({
+    id: row.id,
+    user_id: row.user_id,
+    device_id: row.device_id,
+    name: row.name,
+    description: row.description,
+    location: row.location,
+    timezone: row.timezone,
+    is_active: row.is_active,
+    settings: row.settings,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  }));
 }
 
 export interface FeederWithConnection extends Feeder {
@@ -211,6 +223,8 @@ interface DBFeederWithStatus {
   last_communication: string | null;
   is_online: boolean;
   status: string;
+  user_role: string;
+  is_owner: boolean;
 }
 
 // Ultra-optimized version using database function (best performance)
@@ -279,16 +293,16 @@ export async function getFeederById(id: string): Promise<Feeder | null> {
     redirect("/auth/login");
   }
 
+  // Use RLS-enabled query that respects permissions
   const { data, error } = await supabase
     .from("feeders")
     .select("*")
     .eq("id", id)
-    .eq("user_id", user.id)
     .single();
 
   if (error) {
     if (error.code === "PGRST116") {
-      return null; // Feeder not found
+      return null; // Feeder not found or no access
     }
     console.error("Error fetching feeder:", error);
     throw new Error("Failed to fetch feeder");
@@ -310,16 +324,16 @@ export async function getFeederByDeviceId(
     redirect("/auth/login");
   }
 
+  // Use RLS-enabled query that respects permissions
   const { data, error } = await supabase
     .from("feeders")
     .select("*")
     .eq("device_id", deviceId)
-    .eq("user_id", user.id)
     .single();
 
   if (error) {
     if (error.code === "PGRST116") {
-      return null; // Feeder not found
+      return null; // Feeder not found or no access
     }
     console.error("Error fetching feeder by device ID:", error);
     throw new Error("Failed to fetch feeder");
