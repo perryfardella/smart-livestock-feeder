@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Users, UserPlus, Shield, Crown, LogOut } from "lucide-react";
 import { type FeederRole } from "@/lib/utils/permissions-client";
-import { leaveFeeeder } from "@/lib/actions/permissions";
+import { leaveFeeeder, getFeederMemberships } from "@/lib/actions/permissions";
 import { createClient } from "@/lib/supabase/client";
 import { InviteUserForm } from "./invite-user-form";
 import { FeederMembersList } from "./feeder-members-list";
@@ -31,6 +31,26 @@ interface PermissionsManagementProps {
   currentUserId: string;
 }
 
+interface FeederMember {
+  id: string;
+  user_id: string;
+  role: FeederRole;
+  status: string;
+  invited_at: string | null;
+  accepted_at?: string | null;
+  email?: string | null;
+  is_owner?: boolean;
+}
+
+interface FeederInvitation {
+  id: string;
+  invitee_email: string;
+  role: FeederRole;
+  status: string;
+  expires_at: string;
+  created_at: string;
+}
+
 export function PermissionsManagement({
   feederId,
   feederName,
@@ -44,9 +64,21 @@ export function PermissionsManagement({
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [leavingFeeder, setLeavingFeeder] = useState(false);
 
+  // Cached data
+  const [members, setMembers] = useState<FeederMember[]>([]);
+  const [invitations, setInvitations] = useState<FeederInvitation[]>([]);
+  const [dataLoading, setDataLoading] = useState(false);
+
   useEffect(() => {
     loadUserAccess();
   }, [feederId, currentUserId, refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    // Load cached data when user role is loaded and user has access
+    if (currentUserRole && !isLoading) {
+      loadCachedData();
+    }
+  }, [currentUserRole, isLoading, refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUserAccess = async () => {
     try {
@@ -89,6 +121,42 @@ export function PermissionsManagement({
       setIsOwner(false);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadCachedData = async () => {
+    setDataLoading(true);
+
+    try {
+      // Load members and invitations in parallel
+      const [membersResult, invitationsResponse] = await Promise.all([
+        getFeederMemberships(feederId),
+        fetch(`/api/feeders/${feederId}/invitations`),
+      ]);
+
+      // Handle members
+      if (membersResult.success) {
+        setMembers(membersResult.memberships || []);
+      } else {
+        console.error("Failed to load members:", membersResult.error);
+        setMembers([]);
+      }
+
+      // Handle invitations
+      if (invitationsResponse.ok) {
+        const invitationsData = await invitationsResponse.json();
+        setInvitations(invitationsData.invitations || []);
+      } else {
+        console.error("Failed to load invitations");
+        setInvitations([]);
+      }
+    } catch (error) {
+      console.error("Error loading cached data:", error);
+      // Don't show toast error here as it might be spammy
+      setMembers([]);
+      setInvitations([]);
+    } finally {
+      setDataLoading(false);
     }
   };
 
@@ -261,8 +329,9 @@ export function PermissionsManagement({
 
           <TabsContent value="members" className="space-y-4">
             <FeederMembersList
-              feederId={feederId}
               currentUserRole={currentUserRole}
+              members={members}
+              isLoading={dataLoading}
               onMembershipChanged={handleDataRefresh}
             />
           </TabsContent>
@@ -278,6 +347,8 @@ export function PermissionsManagement({
           <TabsContent value="invitations" className="space-y-4">
             <InvitationStatus
               feederId={feederId}
+              invitations={invitations}
+              isLoading={dataLoading}
               onInvitationChanged={handleDataRefresh}
             />
           </TabsContent>
@@ -288,8 +359,9 @@ export function PermissionsManagement({
       {!canManageTeam && (
         <div className="space-y-6">
           <FeederMembersList
-            feederId={feederId}
             currentUserRole={currentUserRole}
+            members={members}
+            isLoading={dataLoading}
             onMembershipChanged={handleDataRefresh}
           />
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,8 @@ interface FeederInvitation {
 
 interface InvitationStatusProps {
   feederId: string;
+  invitations: FeederInvitation[];
+  isLoading: boolean;
   onInvitationChanged?: () => void;
 }
 
@@ -57,34 +59,12 @@ const STATUS_ICONS = {
 
 export function InvitationStatus({
   feederId,
+  invitations,
+  isLoading,
   onInvitationChanged,
 }: InvitationStatusProps) {
-  const [invitations, setInvitations] = useState<FeederInvitation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [resendingId, setResendingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadInvitations();
-  }, [feederId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const loadInvitations = async () => {
-    try {
-      const response = await fetch(`/api/feeders/${feederId}/invitations`);
-      const data = await response.json();
-
-      if (response.ok) {
-        setInvitations(data.invitations || []);
-      } else {
-        toast.error("Failed to load invitations");
-      }
-    } catch (error) {
-      console.error("Error loading invitations:", error);
-      toast.error("Failed to load invitations");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleRevokeInvitation = async (
     invitationId: string,
@@ -108,7 +88,6 @@ export function InvitationStatus({
 
       if (response.ok) {
         toast.success(`Invitation to ${email} revoked`);
-        await loadInvitations();
         onInvitationChanged?.();
       } else {
         toast.error(data.error || "Failed to revoke invitation");
@@ -143,7 +122,6 @@ export function InvitationStatus({
 
       if (response.ok) {
         toast.success(`Invitation resent to ${email}`);
-        await loadInvitations();
         onInvitationChanged?.();
       } else {
         toast.error(data.error || "Failed to resend invitation");
@@ -199,7 +177,7 @@ export function InvitationStatus({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MailIcon className="h-5 w-5" />
-          Pending Invitations ({pendingInvitations.length})
+          Pending Invitations ({pendingInvitations.length} total)
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -208,117 +186,128 @@ export function InvitationStatus({
             <MailIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <p>No pending invitations</p>
             <p className="text-sm">
-              All sent invitations have been responded to
+              All sent invitations have been accepted or expired
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {pendingInvitations.map((invitation) => {
               const StatusIcon =
-                STATUS_ICONS[invitation.status as keyof typeof STATUS_ICONS];
-              const isInvitationExpired = isExpired(invitation.expires_at);
-              const isRevoking = revokingId === invitation.id;
-              const isResending = resendingId === invitation.id;
+                STATUS_ICONS[invitation.status as keyof typeof STATUS_ICONS] ||
+                Clock;
+              const expired = isExpired(invitation.expires_at);
 
               return (
                 <div
                   key={invitation.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="flex items-center justify-between p-4 border rounded-lg bg-gray-50/50"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
-                      <StatusIcon className="h-5 w-5 text-gray-600" />
+                    <div
+                      className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                        expired ? "bg-red-100" : "bg-yellow-100"
+                      }`}
+                    >
+                      <StatusIcon
+                        className={`h-5 w-5 ${
+                          expired ? "text-red-600" : "text-yellow-600"
+                        }`}
+                      />
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">
                         {invitation.invitee_email}
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2">
                         <Badge className="bg-blue-100 text-blue-800">
-                          Invited as {invitation.role}
+                          {invitation.role}
                         </Badge>
                         <span
-                          className={`text-xs px-2 py-1 rounded ${
-                            isInvitationExpired
-                              ? "bg-red-100 text-red-600"
-                              : "bg-yellow-100 text-yellow-600"
+                          className={`text-sm ${
+                            expired ? "text-red-600" : "text-gray-500"
                           }`}
                         >
                           {getTimeUntilExpiry(invitation.expires_at)}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          Sent{" "}
+                          {new Date(invitation.created_at).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                  <div className="flex items-center gap-2">
+                    {!expired && (
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        disabled={isRevoking || isResending}
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
                         onClick={() =>
                           handleResendInvitation(
                             invitation.id,
                             invitation.invitee_email
                           )
                         }
-                        disabled={isResending}
+                        disabled={resendingId === invitation.id}
                       >
                         <Send className="h-4 w-4 mr-2" />
-                        Resend invitation
-                      </DropdownMenuItem>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600"
-                            onSelect={(e: Event) => e.preventDefault()}
-                          >
-                            <X className="h-4 w-4 mr-2" />
-                            Revoke invitation
-                          </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Revoke invitation
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to revoke the invitation for{" "}
-                              {invitation.invitee_email}? They will no longer be
-                              able to join this feeder.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() =>
-                                handleRevokeInvitation(
-                                  invitation.id,
-                                  invitation.invitee_email
-                                )
-                              }
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              Revoke
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        {resendingId === invitation.id
+                          ? "Sending..."
+                          : "Resend"}
+                      </Button>
+                    )}
 
-                  {isRevoking && (
-                    <div className="text-sm text-gray-500">Revoking...</div>
-                  )}
-                  {isResending && (
-                    <div className="text-sm text-gray-500">Resending...</div>
-                  )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={revokingId === invitation.id}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem
+                              onSelect={(e) => e.preventDefault()}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Revoke invitation
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Revoke invitation to {invitation.invitee_email}?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to revoke this invitation?
+                                The recipient will no longer be able to accept
+                                it.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() =>
+                                  handleRevokeInvitation(
+                                    invitation.id,
+                                    invitation.invitee_email
+                                  )
+                                }
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Revoke Invitation
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               );
             })}
