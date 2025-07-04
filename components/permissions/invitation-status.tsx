@@ -29,6 +29,7 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  Send,
 } from "lucide-react";
 import { type FeederRole } from "@/lib/utils/permissions";
 
@@ -61,6 +62,7 @@ export function InvitationStatus({
   const [invitations, setInvitations] = useState<FeederInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadInvitations();
@@ -123,16 +125,34 @@ export function InvitationStatus({
     invitationId: string,
     email: string
   ) => {
-    try {
-      // TODO: Implement resend invitation API endpoint
-      // This would create a new invitation or extend the expiry
+    setResendingId(invitationId);
 
-      toast.success(`Invitation resent to ${email}`);
-      await loadInvitations();
-      onInvitationChanged?.();
+    try {
+      const response = await fetch(`/api/feeders/${feederId}/invitations`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          invitation_id: invitationId,
+          action: "resend",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(`Invitation resent to ${email}`);
+        await loadInvitations();
+        onInvitationChanged?.();
+      } else {
+        toast.error(data.error || "Failed to resend invitation");
+      }
     } catch (error) {
       console.error("Error resending invitation:", error);
       toast.error("Failed to resend invitation");
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -198,6 +218,7 @@ export function InvitationStatus({
                 STATUS_ICONS[invitation.status as keyof typeof STATUS_ICONS];
               const isInvitationExpired = isExpired(invitation.expires_at);
               const isRevoking = revokingId === invitation.id;
+              const isResending = resendingId === invitation.id;
 
               return (
                 <div
@@ -231,7 +252,11 @@ export function InvitationStatus({
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" disabled={isRevoking}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={isRevoking || isResending}
+                      >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -243,7 +268,9 @@ export function InvitationStatus({
                             invitation.invitee_email
                           )
                         }
+                        disabled={isResending}
                       >
+                        <Send className="h-4 w-4 mr-2" />
                         Resend invitation
                       </DropdownMenuItem>
                       <AlertDialog>
@@ -288,6 +315,9 @@ export function InvitationStatus({
 
                   {isRevoking && (
                     <div className="text-sm text-gray-500">Revoking...</div>
+                  )}
+                  {isResending && (
+                    <div className="text-sm text-gray-500">Resending...</div>
                   )}
                 </div>
               );

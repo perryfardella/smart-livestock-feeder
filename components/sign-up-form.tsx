@@ -13,8 +13,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { Mail, Users } from "lucide-react";
 
 export function SignUpForm({
   className,
@@ -25,7 +26,28 @@ export function SignUpForm({
   const [repeatPassword, setRepeatPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [invitationInfo, setInvitationInfo] = useState<{
+    token: string;
+    feederName?: string;
+    role?: string;
+  } | null>(null);
+
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // Check for invitation parameters in URL
+    const invitationToken = searchParams.get("invitation_token");
+    const inviteeEmail = searchParams.get("email");
+
+    if (invitationToken) {
+      setInvitationInfo({ token: invitationToken });
+
+      if (inviteeEmail) {
+        setEmail(decodeURIComponent(inviteeEmail));
+      }
+    }
+  }, [searchParams]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,10 +80,37 @@ export function SignUpForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
+      {invitationInfo && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <Users className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-medium text-blue-900">
+                  <Mail className="h-4 w-4 inline mr-1" />
+                  You&apos;ve been invited to join a feeder team!
+                </p>
+                <p className="text-sm text-blue-700">
+                  Complete your account creation to accept the invitation.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Sign up</CardTitle>
-          <CardDescription>Create a new account</CardDescription>
+          <CardTitle className="text-2xl">
+            {invitationInfo ? "Complete Your Invitation" : "Sign up"}
+          </CardTitle>
+          <CardDescription>
+            {invitationInfo
+              ? "Create your account to join the feeder team"
+              : "Create a new account"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignUp}>

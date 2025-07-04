@@ -3,6 +3,7 @@ import {
   inviteUserToFeeder,
   getFeederInvitations,
   revokeInvitation,
+  resendInvitation,
   type InviteUserToFeederData,
 } from "@/lib/actions/permissions";
 import { isValidFeederRole } from "@/lib/utils/permissions";
@@ -117,9 +118,21 @@ export async function PATCH(
       }
 
       return NextResponse.json({ message: result.message });
+    } else if (action === "resend") {
+      const result = await resendInvitation(invitation_id);
+
+      if (!result.success) {
+        const errorMessage = result.error || "Failed to resend invitation";
+        return NextResponse.json(
+          { error: errorMessage },
+          { status: errorMessage.includes("Permission denied") ? 403 : 400 }
+        );
+      }
+
+      return NextResponse.json({ message: result.message });
     } else {
       return NextResponse.json(
-        { error: "Invalid action. Supported actions: revoke" },
+        { error: "Invalid action. Supported actions: revoke, resend" },
         { status: 400 }
       );
     }

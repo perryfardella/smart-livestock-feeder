@@ -13,6 +13,184 @@ import {
 } from "@/lib/utils/permissions";
 
 // ============================================================================
+// EMAIL HELPERS
+// ============================================================================
+
+/**
+ * Send invitation email using Resend API
+ */
+async function sendInvitationEmail(
+  inviteeEmail: string,
+  invitationToken: string,
+  feederName: string,
+  inviterName: string,
+  role: FeederRole
+) {
+  try {
+    const { Resend } = await import("resend");
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    const supabase = await createClient();
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+    // Check if user already exists
+    const { data: existingUser } = await supabase
+      .from("auth.users")
+      .select("id")
+      .eq("email", inviteeEmail)
+      .single();
+
+    if (existingUser) {
+      // Existing user - send invitation acceptance email
+      const acceptUrl = `${baseUrl}/invitations/accept?token=${invitationToken}`;
+
+      const { data, error } = await resend.emails.send({
+        from: "Smart Livestock Feeder <noreply@invite.smartfeeder.farm>",
+        to: [inviteeEmail],
+        subject: `Invitation to join ${feederName}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">You've been invited to join a feeder team!</h2>
+            
+            <p>Hi there,</p>
+            
+            <p><strong>${inviterName}</strong> has invited you to join the <strong>${feederName}</strong> team as a <strong>${role}</strong>.</p>
+            
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">What you can do as a ${role}:</h3>
+              <ul>
+                ${
+                  role === "owner"
+                    ? `
+                  <li>Full control over the feeder</li>
+                  <li>Invite and manage team members</li>
+                  <li>Configure all settings</li>
+                `
+                    : role === "manager"
+                      ? `
+                  <li>Monitor feeder status and data</li>
+                  <li>Invite new team members</li>
+                  <li>Manage feeding schedules</li>
+                `
+                      : `
+                  <li>View feeder status and data</li>
+                  <li>Monitor feeding schedules</li>
+                `
+                }
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${acceptUrl}" 
+                 style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Accept Invitation
+              </a>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 14px;">
+              This invitation will expire in 7 days. If you don't want to join this team, you can safely ignore this email.
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            <p style="color: #9ca3af; font-size: 12px;">
+              Smart Livestock Feeder • Remote monitoring and control for your livestock feeders
+            </p>
+          </div>
+        `,
+      });
+
+      if (error) {
+        console.error("Error sending invitation email via Resend:", error);
+        throw error;
+      }
+
+      console.log(
+        `✅ Invitation email sent to ${inviteeEmail} (existing user) - Email ID: ${data?.id}`
+      );
+    } else {
+      // New user - send signup invitation
+      const signupUrl = `${baseUrl}/auth/sign-up?invitation_token=${invitationToken}&email=${encodeURIComponent(inviteeEmail)}`;
+
+      const { data, error } = await resend.emails.send({
+        from: "Smart Livestock Feeder <noreply@invite.smartfeeder.farm>",
+        to: [inviteeEmail],
+        subject: `You're invited to join ${feederName}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">Welcome to Smart Livestock Feeder!</h2>
+            
+            <p>Hi there,</p>
+            
+            <p><strong>${inviterName}</strong> has invited you to join the <strong>${feederName}</strong> team as a <strong>${role}</strong>.</p>
+            
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Get started in 2 easy steps:</h3>
+              <ol>
+                <li>Create your free Smart Livestock Feeder account</li>
+                <li>Start monitoring and controlling your livestock feeders remotely</li>
+              </ol>
+            </div>
+            
+            <div style="background: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: #059669;">What you'll be able to do as a ${role}:</h3>
+              <ul>
+                ${
+                  role === "owner"
+                    ? `
+                  <li>Full control over the feeder</li>
+                  <li>Invite and manage team members</li>
+                  <li>Configure all settings</li>
+                `
+                    : role === "manager"
+                      ? `
+                  <li>Monitor feeder status and data</li>
+                  <li>Invite new team members</li>
+                  <li>Manage feeding schedules</li>
+                `
+                      : `
+                  <li>View feeder status and data</li>
+                  <li>Monitor feeding schedules</li>
+                `
+                }
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${signupUrl}" 
+                 style="background: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Create Account & Join Team
+              </a>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 14px;">
+              This invitation will expire in 7 days. If you don't want to join this team, you can safely ignore this email.
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            <p style="color: #9ca3af; font-size: 12px;">
+              Smart Livestock Feeder • Remote monitoring and control for your livestock feeders
+            </p>
+          </div>
+        `,
+      });
+
+      if (error) {
+        console.error("Error sending signup invitation via Resend:", error);
+        throw error;
+      }
+
+      console.log(
+        `✅ Signup invitation sent to ${inviteeEmail} - Email ID: ${data?.id}`
+      );
+    }
+  } catch (error) {
+    console.error("Failed to send invitation email:", error);
+    // Don't throw here - we want the invitation to be created even if email fails
+    // This ensures the user can still join if they sign up with the invited email
+  }
+}
+
+// ============================================================================
 // MEMBERSHIP MANAGEMENT
 // ============================================================================
 
@@ -139,9 +317,30 @@ export async function inviteUserToFeeder(data: InviteUserToFeederData) {
       return { success: false, error: "Failed to create invitation" };
     }
 
-    // TODO: Send email notification (implement in Phase 2)
-    console.log(
-      `📧 TODO: Send invitation email to ${data.invitee_email} for feeder ${data.feeder_id}`
+    // Get feeder name and inviter name for email
+    const { data: feederData } = await supabase
+      .from("feeders")
+      .select("name")
+      .eq("id", data.feeder_id)
+      .single();
+
+    const { data: inviterData } = await supabase
+      .from("auth.users")
+      .select("raw_user_meta_data")
+      .eq("id", user.id)
+      .single();
+
+    const feederName = feederData?.name || "Smart Livestock Feeder";
+    const inviterName =
+      inviterData?.raw_user_meta_data?.full_name || user.email || "Someone";
+
+    // Send invitation email using Resend via Supabase SMTP
+    await sendInvitationEmail(
+      data.invitee_email,
+      invitation.invitation_token,
+      feederName,
+      inviterName,
+      data.role
     );
 
     revalidatePath(`/dashboard/feeder/${data.feeder_id}`);
@@ -337,6 +536,99 @@ export async function revokeInvitation(invitationId: string) {
   } catch (error) {
     console.error("Error revoking invitation:", error);
     return { success: false, error: "Failed to revoke invitation" };
+  }
+}
+
+/**
+ * Resend an invitation email (for feeder owners/managers)
+ */
+export async function resendInvitation(invitationId: string) {
+  try {
+    const supabase = await createClient();
+
+    // Get current user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return { success: false, error: "Authentication required" };
+    }
+
+    // Get the invitation details
+    const { data: invitation, error: invitationError } = await supabase
+      .from("feeder_invitations")
+      .select("feeder_id, status, invitee_email, role, invitation_token")
+      .eq("id", invitationId)
+      .single();
+
+    if (invitationError || !invitation) {
+      return { success: false, error: "Invitation not found" };
+    }
+
+    // Check if invitation is still pending
+    if (invitation.status !== "pending") {
+      return { success: false, error: "Can only resend pending invitations" };
+    }
+
+    // Check if user has permission to resend invitations for this feeder
+    const userRole = await getUserFeederRole(invitation.feeder_id, user.id);
+    if (!userRole || !["owner", "manager"].includes(userRole)) {
+      return { success: false, error: "Permission denied" };
+    }
+
+    // Generate new invitation token for security
+    const newToken = randomUUID();
+
+    // Update invitation with new token and extended expiry
+    const { error: updateError } = await supabase
+      .from("feeder_invitations")
+      .update({
+        invitation_token: newToken,
+        expires_at: new Date(
+          Date.now() + 7 * 24 * 60 * 60 * 1000
+        ).toISOString(), // 7 days from now
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", invitationId);
+
+    if (updateError) {
+      console.error("Error updating invitation for resend:", updateError);
+      return { success: false, error: "Failed to resend invitation" };
+    }
+
+    // Get feeder name and inviter name for email
+    // Get feeder and inviter names for email
+    const { data: feederData } = await supabase
+      .from("feeders")
+      .select("name")
+      .eq("id", invitation.feeder_id)
+      .single();
+
+    const { data: inviterData } = await supabase
+      .from("auth.users")
+      .select("raw_user_meta_data")
+      .eq("id", user.id)
+      .single();
+
+    const feederName = feederData?.name || "Smart Livestock Feeder";
+    const inviterName =
+      inviterData?.raw_user_meta_data?.full_name || user.email || "Someone";
+
+    // Send fresh invitation email
+    await sendInvitationEmail(
+      invitation.invitee_email,
+      newToken,
+      feederName,
+      inviterName,
+      invitation.role
+    );
+
+    revalidatePath(`/dashboard/feeder/${invitation.feeder_id}`);
+    return { success: true, message: "Invitation resent successfully" };
+  } catch (error) {
+    console.error("Error resending invitation:", error);
+    return { success: false, error: "Failed to resend invitation" };
   }
 }
 
