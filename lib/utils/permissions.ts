@@ -375,6 +375,32 @@ export function canManageRole(
   return getRoleHierarchyLevel(managerRole) > getRoleHierarchyLevel(targetRole);
 }
 
+/**
+ * Get roles that a user can invite based on their role and PRD rules
+ * Managers can only invite viewers and schedulers, owners can invite anyone
+ */
+export function getInvitableRoles(inviterRole: FeederRole): FeederRole[] {
+  switch (inviterRole) {
+    case "owner":
+      return ["viewer", "scheduler", "manager"];
+    case "manager":
+      return ["viewer", "scheduler"]; // Cannot invite other managers
+    default:
+      return []; // Viewers and schedulers cannot invite anyone
+  }
+}
+
+/**
+ * Check if an inviter can invite someone to a specific role
+ */
+export function canInviteToRole(
+  inviterRole: FeederRole,
+  targetRole: FeederRole
+): boolean {
+  const invitableRoles = getInvitableRoles(inviterRole);
+  return invitableRoles.includes(targetRole);
+}
+
 // ============================================================================
 // MIDDLEWARE HELPERS
 // ============================================================================

@@ -9,6 +9,7 @@ import {
   getFeederStatus,
   type FeederStatus,
 } from "@/lib/utils/feeder-status";
+import { hasFeederPermission } from "@/lib/utils/permissions";
 
 export interface Feeder {
   id: string;
@@ -494,6 +495,19 @@ export async function updateFeeder(
   } = await supabase.auth.getUser();
   if (userError || !user) {
     redirect("/auth/login");
+  }
+
+  // Check if user has permission to edit feeder settings
+  const canEditSettings = await hasFeederPermission(
+    id,
+    "edit_feeder_settings",
+    user.id
+  );
+
+  if (!canEditSettings) {
+    throw new Error(
+      "Permission denied: You don't have permission to edit this feeder's settings"
+    );
   }
 
   // Only update the fields that are allowed to be modified

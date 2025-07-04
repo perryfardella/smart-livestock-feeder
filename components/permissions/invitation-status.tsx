@@ -31,7 +31,7 @@ import {
   XCircle,
   Send,
 } from "lucide-react";
-import { type FeederRole } from "@/lib/utils/permissions";
+import { type FeederRole } from "@/lib/utils/permissions-client";
 
 interface FeederInvitation {
   id: string;

@@ -31,7 +31,7 @@ import {
   Calendar,
   Settings,
 } from "lucide-react";
-import { type FeederRole } from "@/lib/utils/permissions";
+import { type FeederRole } from "@/lib/utils/permissions-client";
 import {
   getFeederMemberships,
   updateMembership,

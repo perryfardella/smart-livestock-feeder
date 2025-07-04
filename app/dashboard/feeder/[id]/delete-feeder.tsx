@@ -13,10 +13,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { toast } from "sonner";
 import { deleteFeeder, type Feeder } from "@/lib/actions/feeders";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 interface DeleteFeederProps {
   feeder: Feeder;
@@ -37,7 +38,30 @@ export function DeleteFeeder({
 }: DeleteFeederProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isOwner, setIsOwner] = useState(false);
   const router = useRouter();
+
+  // Check if current user is the owner of the feeder
+  useEffect(() => {
+    const checkOwnership = async () => {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          // Check if the current user is the feeder owner
+          setIsOwner(feeder.user_id === user.id);
+        }
+      } catch (error) {
+        console.error("Error checking feeder ownership:", error);
+        setIsOwner(false);
+      }
+    };
+
+    checkOwnership();
+  }, [feeder.user_id]);
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -52,6 +76,11 @@ export function DeleteFeeder({
       }
     });
   };
+
+  // Only show delete button for feeder owners
+  if (!isOwner) {
+    return null;
+  }
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>

@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Users, UserPlus, Shield, Crown, LogOut } from "lucide-react";
-import { type FeederRole } from "@/lib/utils/permissions";
+import { type FeederRole } from "@/lib/utils/permissions-client";
 import { leaveFeeeder } from "@/lib/actions/permissions";
 import { createClient } from "@/lib/supabase/client";
 import { InviteUserForm } from "./invite-user-form";

@@ -10,6 +10,8 @@ import {
   getUserFeederRole,
   isValidFeederRole,
   isValidPermissionType,
+  canInviteToRole,
+  getInvitableRoles,
 } from "@/lib/utils/permissions";
 
 // ============================================================================
@@ -238,6 +240,24 @@ export async function inviteUserToFeeder(data: InviteUserToFeederData) {
       return {
         success: false,
         error: "Permission denied: Cannot invite users to this feeder",
+      };
+    }
+
+    // Get inviter's role to check what roles they can invite
+    const inviterRole = await getUserFeederRole(data.feeder_id, user.id);
+    if (!inviterRole) {
+      return {
+        success: false,
+        error: "Unable to determine your role for this feeder",
+      };
+    }
+
+    // Check if inviter can invite to the specified role (PRD restrictions)
+    if (!canInviteToRole(inviterRole, data.role)) {
+      const allowedRoles = getInvitableRoles(inviterRole);
+      return {
+        success: false,
+        error: `Permission denied: ${inviterRole}s can only invite users as: ${allowedRoles.join(", ")}`,
       };
     }
 
@@ -819,6 +839,34 @@ export async function updateMembership(data: UpdateMembershipData) {
     // Validate role if provided
     if (data.role && !isValidFeederRole(data.role)) {
       return { success: false, error: "Invalid role specified" };
+    }
+
+    // Check role hierarchy restrictions (PRD rules)
+    if (data.role) {
+      const managerRole = await getUserFeederRole(
+        membership.feeder_id,
+        user.id
+      );
+      if (!managerRole) {
+        return { success: false, error: "Unable to determine your role" };
+      }
+
+      // Check if manager can assign/change to the specified role
+      if (!canInviteToRole(managerRole, data.role)) {
+        const allowedRoles = getInvitableRoles(managerRole);
+        return {
+          success: false,
+          error: `Permission denied: ${managerRole}s can only manage users as: ${allowedRoles.join(", ")}`,
+        };
+      }
+
+      // Check if manager can manage the current membership target
+      if (!canInviteToRole(managerRole, membership.role)) {
+        return {
+          success: false,
+          error: `Permission denied: ${managerRole}s cannot manage ${membership.role}s`,
+        };
+      }
     }
 
     // Build update data

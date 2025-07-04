@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { UserPlus, Mail } from "lucide-react";
-import { type FeederRole } from "@/lib/utils/permissions";
+import {
+  type FeederRole,
+  getInvitableRoles,
+} from "@/lib/utils/permissions-client";
+import { createClient } from "@/lib/supabase/client";
 
 interface InviteUserFormProps {
   feederId: string;
@@ -42,6 +46,48 @@ export function InviteUserForm({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<FeederRole>("viewer");
   const [isLoading, setIsLoading] = useState(false);
+  const [availableRoles, setAvailableRoles] = useState<
+    Array<{ value: FeederRole; label: string }>
+  >([]);
+
+  // Get current user's role and determine what roles they can invite
+  useEffect(() => {
+    const getCurrentUserRole = async () => {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          // Get user's role for this feeder
+          const response = await fetch(`/api/feeders/${feederId}/role`);
+          if (response.ok) {
+            const data = await response.json();
+            const userRole = data.role as FeederRole;
+
+            // Get the roles this user can invite
+            const invitableRoles = getInvitableRoles(userRole);
+            const filteredRoles = ROLES.filter((roleOption) =>
+              invitableRoles.includes(roleOption.value)
+            );
+            setAvailableRoles(filteredRoles);
+
+            // Reset role to first available option if current selection is not allowed
+            if (filteredRoles.length > 0 && !invitableRoles.includes(role)) {
+              setRole(filteredRoles[0].value);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error getting user role:", error);
+        // Default to viewer only if error occurs
+        setAvailableRoles([{ value: "viewer", label: "Viewer" }]);
+      }
+    };
+
+    getCurrentUserRole();
+  }, [feederId, role]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +174,7 @@ export function InviteUserForm({
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
-                {ROLES.map((roleOption) => (
+                {availableRoles.map((roleOption) => (
                   <SelectItem key={roleOption.value} value={roleOption.value}>
                     <div className="flex flex-col">
                       <span className="font-medium">{roleOption.label}</span>

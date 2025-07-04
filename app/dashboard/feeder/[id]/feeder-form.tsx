@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Pencil } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { toast } from "sonner";
 import { createFeeder, updateFeeder, type Feeder } from "@/lib/actions/feeders";
 
@@ -52,6 +52,7 @@ interface FeederFormProps {
 export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [canEditFeeder, setCanEditFeeder] = useState(true); // Default to true for create mode
 
   // Form state
   const [deviceId, setDeviceId] = useState(feeder?.device_id || "");
@@ -61,6 +62,30 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
   const [timezone, setTimezone] = useState(
     feeder?.timezone || "Australia/Sydney"
   );
+
+  // Check edit permissions for edit mode
+  useEffect(() => {
+    const checkEditPermission = async () => {
+      if (mode === "edit" && feeder) {
+        try {
+          const response = await fetch(
+            `/api/feeders/${feeder.id}/permissions?permission=edit_feeder_settings`
+          );
+          if (response.ok) {
+            const data = await response.json();
+            setCanEditFeeder(data.hasPermission);
+          } else {
+            setCanEditFeeder(false);
+          }
+        } catch (error) {
+          console.error("Error checking edit permission:", error);
+          setCanEditFeeder(false);
+        }
+      }
+    };
+
+    checkEditPermission();
+  }, [mode, feeder]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,14 +148,19 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
           error instanceof Error
             ? error.message
             : mode === "create"
-            ? "Failed to create feeder"
-            : "Failed to update feeder";
+              ? "Failed to create feeder"
+              : "Failed to update feeder";
 
         toast.error(errorMessage);
         console.error("Unexpected error:", error);
       }
     });
   };
+
+  // Don't render the edit button if user doesn't have permission
+  if (mode === "edit" && !canEditFeeder) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -230,8 +260,8 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
                   ? "Adding..."
                   : "Saving..."
                 : mode === "create"
-                ? "Add Feeder"
-                : "Save Changes"}
+                  ? "Add Feeder"
+                  : "Save Changes"}
             </Button>
           </div>
         </form>
