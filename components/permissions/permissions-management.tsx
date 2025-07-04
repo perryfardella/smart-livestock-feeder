@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,8 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Users, UserPlus, Shield, Crown, LogOut } from "lucide-react";
 import { type FeederRole } from "@/lib/utils/permissions-client";
-import { leaveFeeeder, getFeederMemberships } from "@/lib/actions/permissions";
-import { createClient } from "@/lib/supabase/client";
+import { leaveFeeeder } from "@/lib/actions/permissions";
 import { InviteUserForm } from "./invite-user-form";
 import { FeederMembersList } from "./feeder-members-list";
 import { InvitationStatus } from "./invitation-status";
@@ -28,7 +27,12 @@ import {
 interface PermissionsManagementProps {
   feederId: string;
   feederName: string;
-  currentUserId: string;
+  currentUserRole: FeederRole | null;
+  isOwner: boolean;
+  members: FeederMember[];
+  invitations: FeederInvitation[];
+  isLoading: boolean;
+  onDataChanged?: () => void;
 }
 
 interface FeederMember {
@@ -54,114 +58,17 @@ interface FeederInvitation {
 export function PermissionsManagement({
   feederId,
   feederName,
-  currentUserId,
+  currentUserRole,
+  isOwner,
+  members,
+  invitations,
+  isLoading: dataLoading,
+  onDataChanged,
 }: PermissionsManagementProps) {
-  const [currentUserRole, setCurrentUserRole] = useState<FeederRole | null>(
-    null
-  );
-  const [isOwner, setIsOwner] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [leavingFeeder, setLeavingFeeder] = useState(false);
 
-  // Cached data
-  const [members, setMembers] = useState<FeederMember[]>([]);
-  const [invitations, setInvitations] = useState<FeederInvitation[]>([]);
-  const [dataLoading, setDataLoading] = useState(false);
-
-  useEffect(() => {
-    loadUserAccess();
-  }, [feederId, currentUserId, refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    // Load cached data when user role is loaded and user has access
-    if (currentUserRole && !isLoading) {
-      loadCachedData();
-    }
-  }, [currentUserRole, isLoading, refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const loadUserAccess = async () => {
-    try {
-      const supabase = createClient();
-
-      // Check if user is the owner of the feeder
-      const { data: feederOwner } = await supabase
-        .from("feeders")
-        .select("user_id")
-        .eq("id", feederId)
-        .eq("user_id", currentUserId)
-        .single();
-
-      if (feederOwner) {
-        // User is the owner
-        setCurrentUserRole("owner");
-        setIsOwner(true);
-      } else {
-        // Check membership
-        const { data: membership } = await supabase
-          .from("feeder_memberships")
-          .select("role")
-          .eq("feeder_id", feederId)
-          .eq("user_id", currentUserId)
-          .eq("status", "accepted")
-          .single();
-
-        if (membership) {
-          setCurrentUserRole(membership.role as FeederRole);
-          setIsOwner(false);
-        } else {
-          setCurrentUserRole(null);
-          setIsOwner(false);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading user access:", error);
-      toast.error("Failed to load access permissions");
-      setCurrentUserRole(null);
-      setIsOwner(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadCachedData = async () => {
-    setDataLoading(true);
-
-    try {
-      // Load members and invitations in parallel
-      const [membersResult, invitationsResponse] = await Promise.all([
-        getFeederMemberships(feederId),
-        fetch(`/api/feeders/${feederId}/invitations`),
-      ]);
-
-      // Handle members
-      if (membersResult.success) {
-        setMembers(membersResult.memberships || []);
-      } else {
-        console.error("Failed to load members:", membersResult.error);
-        setMembers([]);
-      }
-
-      // Handle invitations
-      if (invitationsResponse.ok) {
-        const invitationsData = await invitationsResponse.json();
-        setInvitations(invitationsData.invitations || []);
-      } else {
-        console.error("Failed to load invitations");
-        setInvitations([]);
-      }
-    } catch (error) {
-      console.error("Error loading cached data:", error);
-      // Don't show toast error here as it might be spammy
-      setMembers([]);
-      setInvitations([]);
-    } finally {
-      setDataLoading(false);
-    }
-  };
-
   const handleDataRefresh = () => {
-    setRefreshTrigger((prev) => prev + 1);
+    onDataChanged?.();
   };
 
   const handleLeaveFeeder = async () => {
@@ -189,24 +96,6 @@ export function PermissionsManagement({
 
   const canManageTeam =
     currentUserRole === "owner" || currentUserRole === "manager";
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Team & Permissions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <p className="text-gray-500">Loading permissions...</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   if (!currentUserRole) {
     return (

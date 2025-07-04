@@ -1,19 +1,18 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { SensorChart } from "./sensor-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Database } from "lucide-react";
-import {
-  getAllSensorDataUnfiltered,
-  type SensorDataSummary,
-} from "@/lib/actions/sensor-data";
+import { type SensorDataSummary } from "@/lib/actions/sensor-data";
 import { format } from "date-fns";
 
 interface SensorDashboardProps {
-  deviceId: string;
   feederName: string;
+  rawSensorData: RawSensorData[];
+  isLoading: boolean;
+  onDataRefresh?: () => void;
 }
 
 interface SensorChartData {
@@ -113,13 +112,16 @@ const processFilteredData = (
   }
 
   // Group by sensor type
-  const sensorGroups = filteredData.reduce((acc, reading) => {
-    if (!acc[reading.sensor_type]) {
-      acc[reading.sensor_type] = [];
-    }
-    acc[reading.sensor_type].push(reading);
-    return acc;
-  }, {} as Record<string, RawSensorData[]>);
+  const sensorGroups = filteredData.reduce(
+    (acc, reading) => {
+      if (!acc[reading.sensor_type]) {
+        acc[reading.sensor_type] = [];
+      }
+      acc[reading.sensor_type].push(reading);
+      return acc;
+    },
+    {} as Record<string, RawSensorData[]>
+  );
 
   // Create summary
   const summary: SensorDataSummary[] = Object.entries(sensorGroups).map(
@@ -164,14 +166,13 @@ const processFilteredData = (
 };
 
 export function SensorDashboard({
-  deviceId,
   feederName,
+  rawSensorData,
+  isLoading,
+  onDataRefresh,
 }: SensorDashboardProps) {
-  // Cached raw data from database
-  const [rawSensorData, setRawSensorData] = useState<RawSensorData[]>([]);
   const [sensorSummary, setSensorSummary] = useState<SensorDataSummary[]>([]);
   const [chartData, setChartData] = useState<SensorChartData[]>([]);
-  const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<TimePeriod>("all-time"); // Default to all-time
 
   const getSensorUnit = (sensorType: string): string => {
@@ -187,50 +188,33 @@ export function SensorDashboard({
     return "";
   };
 
-  // Load all sensor data once from database
-  const loadAllSensorData = useCallback(async () => {
-    setLoading(true);
-
-    try {
-      const data = await getAllSensorDataUnfiltered(deviceId, 2000);
-      setRawSensorData(data);
-    } catch (error) {
-      console.error("Error loading sensor data:", error);
-      // Silently handle errors on automatic refresh to avoid spamming users
-    } finally {
-      setLoading(false);
-    }
-  }, [deviceId]);
-
-  // Process cached data when timeRange changes (instant, no DB call)
+  // Process cached data when timeRange changes or data updates
   useEffect(() => {
     if (rawSensorData.length > 0) {
       const filteredData = filterDataByTimeRange(rawSensorData, timeRange);
-      const processed = processFilteredData(filteredData, timeRange);
-      setSensorSummary(processed.summary);
-      setChartData(processed.chartData);
+      const { summary, chartData: processedChartData } = processFilteredData(
+        filteredData,
+        timeRange
+      );
+      setSensorSummary(summary);
+      setChartData(processedChartData);
     } else {
       setSensorSummary([]);
       setChartData([]);
     }
   }, [rawSensorData, timeRange]);
 
-  // Load data on mount and set up periodic refresh
+  // Set up auto-refresh for connection status checking
   useEffect(() => {
-    loadAllSensorData();
-
-    // Set up automatic polling every 2 minutes for fresh sensor data
     const interval = setInterval(() => {
-      // Only update if the page is visible to avoid unnecessary requests
-      if (!document.hidden) {
-        loadAllSensorData();
+      if (!document.hidden && onDataRefresh) {
+        onDataRefresh();
       }
-    }, 120000); // 2 minutes = 120,000ms
+    }, 120000); // 2 minutes
 
-    // Also refresh when the page becomes visible again
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        loadAllSensorData();
+      if (!document.hidden && onDataRefresh) {
+        onDataRefresh();
       }
     };
 
@@ -240,7 +224,7 @@ export function SensorDashboard({
       clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [loadAllSensorData]);
+  }, [onDataRefresh]);
 
   const formatSensorType = (type: string) => {
     return (
@@ -269,7 +253,7 @@ export function SensorDashboard({
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <Card>

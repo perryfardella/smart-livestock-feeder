@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -61,7 +55,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-  getFeedingSchedules,
   createFeedingSchedule,
   updateFeedingSchedule,
   deleteFeedingSchedule,
@@ -156,24 +149,31 @@ function NumberInput({
 
 type FeedingScheduleSectionProps = {
   feederId: string;
+  schedules: FeedingSchedule[];
+  userPermissions: {
+    canCreateSchedules: boolean;
+    canEditSchedules: boolean;
+    canDeleteSchedules: boolean;
+  };
+  isLoading: boolean;
+  onSchedulesChanged?: () => void;
 };
 
 export function FeedingScheduleSection({
   feederId,
+  schedules,
+  userPermissions,
+  isLoading,
+  onSchedulesChanged,
 }: FeedingScheduleSectionProps) {
-  const [schedules, setSchedules] = useState<FeedingSchedule[]>([]);
   const [editingSchedule, setEditingSchedule] =
     useState<FeedingSchedule | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [deletingScheduleId, setDeletingScheduleId] = useState<string | null>(
     null
   );
-  const [canCreateSchedules, setCanCreateSchedules] = useState(false);
-  const [canEditSchedules, setCanEditSchedules] = useState(false);
-  const [canDeleteSchedules, setCanDeleteSchedules] = useState(false);
 
   // Memoize feederId to prevent unnecessary re-renders
   const memoizedFeederId = useMemo(() => feederId, [feederId]);
@@ -181,69 +181,12 @@ export function FeedingScheduleSection({
   // Track if we've loaded schedules initially to prevent duplicate requests
   const hasLoadedInitially = useRef(false);
 
-  const loadSchedules = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const result = await getFeedingSchedules(memoizedFeederId);
-      if (result.success) {
-        setSchedules(result.schedules);
-      } else {
-        toast.error(result.error || "Failed to load feeding schedules");
-      }
-    } catch (error) {
-      console.error("Error loading schedules:", error);
-      toast.error("Failed to load feeding schedules");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [memoizedFeederId]);
-
-  const checkPermissions = useCallback(async () => {
-    try {
-      // Check multiple permissions in parallel
-      const [createResponse, editResponse, deleteResponse] = await Promise.all([
-        fetch(
-          `/api/feeders/${memoizedFeederId}/permissions?permission=create_feeding_schedules`
-        ),
-        fetch(
-          `/api/feeders/${memoizedFeederId}/permissions?permission=edit_feeding_schedules`
-        ),
-        fetch(
-          `/api/feeders/${memoizedFeederId}/permissions?permission=delete_feeding_schedules`
-        ),
-      ]);
-
-      if (createResponse.ok) {
-        const createData = await createResponse.json();
-        setCanCreateSchedules(createData.hasPermission);
-      }
-
-      if (editResponse.ok) {
-        const editData = await editResponse.json();
-        setCanEditSchedules(editData.hasPermission);
-      }
-
-      if (deleteResponse.ok) {
-        const deleteData = await deleteResponse.json();
-        setCanDeleteSchedules(deleteData.hasPermission);
-      }
-    } catch (error) {
-      console.error("Error checking feeding schedule permissions:", error);
-      // Default to false for safety
-      setCanCreateSchedules(false);
-      setCanEditSchedules(false);
-      setCanDeleteSchedules(false);
-    }
-  }, [memoizedFeederId]);
-
-  // Load schedules and check permissions on component mount
+  // Load initial permissions and schedules
   useEffect(() => {
-    if (!hasLoadedInitially.current) {
+    if (!hasLoadedInitially.current && schedules.length > 0) {
       hasLoadedInitially.current = true;
-      loadSchedules();
-      checkPermissions();
     }
-  }, [loadSchedules, checkPermissions]);
+  }, [schedules]);
 
   const handleAddSchedule = async (
     schedule: Omit<FeedingSchedule, "id" | "feederId">
@@ -254,16 +197,18 @@ export function FeedingScheduleSection({
         ...schedule,
         feederId: memoizedFeederId,
       });
+
       if (result.success) {
-        await loadSchedules(); // Refresh the list
+        toast.success("Feeding schedule created successfully");
         setIsDialogOpen(false);
-        toast.success("Feeding schedule added successfully");
+        setEditingSchedule(null);
+        onSchedulesChanged?.();
       } else {
         toast.error(result.error || "Failed to create feeding schedule");
       }
     } catch (error) {
-      console.error("Error creating schedule:", error);
       toast.error("Failed to create feeding schedule");
+      console.error("Create schedule error:", error);
     } finally {
       setIsCreating(false);
     }
@@ -273,23 +218,25 @@ export function FeedingScheduleSection({
     schedule: Omit<FeedingSchedule, "id" | "feederId">
   ) => {
     if (!editingSchedule?.id) return;
+
     setIsUpdating(true);
     try {
       const result = await updateFeedingSchedule(editingSchedule.id, {
         ...schedule,
         feederId: memoizedFeederId,
       });
+
       if (result.success) {
-        await loadSchedules(); // Refresh the list
-        setEditingSchedule(null);
-        setIsDialogOpen(false);
         toast.success("Feeding schedule updated successfully");
+        setIsDialogOpen(false);
+        setEditingSchedule(null);
+        onSchedulesChanged?.();
       } else {
         toast.error(result.error || "Failed to update feeding schedule");
       }
     } catch (error) {
-      console.error("Error updating schedule:", error);
       toast.error("Failed to update feeding schedule");
+      console.error("Update schedule error:", error);
     } finally {
       setIsUpdating(false);
     }
@@ -298,16 +245,16 @@ export function FeedingScheduleSection({
   const handleDeleteSchedule = async (id: string) => {
     setDeletingScheduleId(id);
     try {
-      const result = await deleteFeedingSchedule(id, memoizedFeederId);
+      const result = await deleteFeedingSchedule(id, feederId);
       if (result.success) {
-        await loadSchedules(); // Refresh the list
         toast.success("Feeding schedule deleted successfully");
+        onSchedulesChanged?.();
       } else {
         toast.error(result.error || "Failed to delete feeding schedule");
       }
     } catch (error) {
-      console.error("Error deleting schedule:", error);
       toast.error("Failed to delete feeding schedule");
+      console.error("Delete schedule error:", error);
     } finally {
       setDeletingScheduleId(null);
     }
@@ -405,7 +352,7 @@ export function FeedingScheduleSection({
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Feeding Schedule</span>
-          {canCreateSchedules && (
+          {userPermissions.canCreateSchedules && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -543,7 +490,7 @@ export function FeedingScheduleSection({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        {canEditSchedules && (
+                        {userPermissions.canEditSchedules && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -560,7 +507,7 @@ export function FeedingScheduleSection({
                             <Pencil className="h-4 w-4" />
                           </Button>
                         )}
-                        {canDeleteSchedules && (
+                        {userPermissions.canDeleteSchedules && (
                           <Button
                             variant="outline"
                             size="sm"

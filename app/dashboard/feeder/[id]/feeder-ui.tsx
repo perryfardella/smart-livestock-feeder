@@ -19,7 +19,10 @@ import { DeleteFeeder } from "./delete-feeder";
 import { type Feeder } from "@/lib/actions/feeders";
 import { SensorDashboard } from "@/components/sensor-dashboard";
 import { useState, useEffect } from "react";
-import { getFeederConnectionStatus } from "@/lib/actions/sensor-data";
+import {
+  getFeederConnectionStatus,
+  getAllSensorDataUnfiltered,
+} from "@/lib/actions/sensor-data";
 import {
   type FeederConnectionStatus,
   getFeederStatus,
@@ -29,6 +32,46 @@ import { FeedingScheduleSection } from "./feeding-schedule";
 import { PermissionsManagement } from "@/components/permissions/permissions-management";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
+import {
+  getFeedingSchedules,
+  type FeedingSchedule,
+} from "@/lib/actions/feeding-schedules";
+import { getFeederMemberships } from "@/lib/actions/permissions";
+import { type FeederRole } from "@/lib/utils/permissions-client";
+
+// Types for cached data
+interface FeederMember {
+  id: string;
+  user_id: string;
+  role: FeederRole;
+  status: string;
+  invited_at: string | null;
+  accepted_at?: string | null;
+  email?: string | null;
+  is_owner?: boolean;
+}
+
+interface FeederInvitation {
+  id: string;
+  invitee_email: string;
+  role: FeederRole;
+  status: string;
+  expires_at: string;
+  created_at: string;
+}
+
+interface RawSensorData {
+  sensor_type: string;
+  sensor_value: number;
+  timestamp: string;
+}
+
+interface UserPermissions {
+  canManualFeed: boolean;
+  canCreateSchedules: boolean;
+  canEditSchedules: boolean;
+  canDeleteSchedules: boolean;
+}
 
 export function FeederUI({ feeder }: { feeder: Feeder }) {
   const [connectionStatus, setConnectionStatus] =
@@ -38,7 +81,22 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
   const [feedAmount, setFeedAmount] = useState("");
   const [isReleasingFeed, setIsReleasingFeed] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [canManualFeed, setCanManualFeed] = useState(false);
+
+  // Cached data states
+  const [userPermissions, setUserPermissions] = useState<UserPermissions>({
+    canManualFeed: false,
+    canCreateSchedules: false,
+    canEditSchedules: false,
+    canDeleteSchedules: false,
+  });
+  const [feedingSchedules, setFeedingSchedules] = useState<FeedingSchedule[]>(
+    []
+  );
+  const [rawSensorData, setRawSensorData] = useState<RawSensorData[]>([]);
+  const [members, setMembers] = useState<FeederMember[]>([]);
+  const [invitations, setInvitations] = useState<FeederInvitation[]>([]);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Get current user ID and check permissions
   useEffect(() => {
@@ -49,29 +107,145 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
       } = await supabase.auth.getUser();
       if (user) {
         setCurrentUserId(user.id);
-
-        // Check if user has manual feed permission
-        try {
-          const response = await fetch(
-            `/api/feeders/${feeder.id}/permissions?permission=manual_feed_release`
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            setCanManualFeed(data.hasPermission);
-          } else {
-            console.error("Failed to check manual feed permission");
-            setCanManualFeed(false);
-          }
-        } catch (error) {
-          console.error("Error checking manual feed permission:", error);
-          setCanManualFeed(false);
-        }
+        await loadUserPermissions();
       }
     };
 
     getCurrentUser();
   }, [feeder.id]);
+
+  // Load cached data when user is authenticated
+  useEffect(() => {
+    if (currentUserId) {
+      loadAllCachedData();
+    }
+  }, [currentUserId, refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Determine current user's role and ownership status from cached data
+  const getCurrentUserPermissionInfo = () => {
+    if (!currentUserId) {
+      return { currentUserRole: null, isOwner: false };
+    }
+
+    // Check if user is the feeder owner
+    if (feeder.user_id === currentUserId) {
+      return { currentUserRole: "owner" as FeederRole, isOwner: true };
+    }
+
+    // Check membership in cached data
+    const userMembership = members.find(
+      (member) =>
+        member.user_id === currentUserId && member.status === "accepted"
+    );
+
+    if (userMembership) {
+      return { currentUserRole: userMembership.role, isOwner: false };
+    }
+
+    return { currentUserRole: null, isOwner: false };
+  };
+
+  const { currentUserRole, isOwner } = getCurrentUserPermissionInfo();
+
+  const loadUserPermissions = async () => {
+    try {
+      const [manualFeedResponse, createResponse, editResponse, deleteResponse] =
+        await Promise.all([
+          fetch(
+            `/api/feeders/${feeder.id}/permissions?permission=manual_feed_release`
+          ),
+          fetch(
+            `/api/feeders/${feeder.id}/permissions?permission=create_feeding_schedules`
+          ),
+          fetch(
+            `/api/feeders/${feeder.id}/permissions?permission=edit_feeding_schedules`
+          ),
+          fetch(
+            `/api/feeders/${feeder.id}/permissions?permission=delete_feeding_schedules`
+          ),
+        ]);
+
+      const [manualFeed, create, edit, deletePerms] = await Promise.all([
+        manualFeedResponse.ok
+          ? manualFeedResponse.json()
+          : { hasPermission: false },
+        createResponse.ok ? createResponse.json() : { hasPermission: false },
+        editResponse.ok ? editResponse.json() : { hasPermission: false },
+        deleteResponse.ok ? deleteResponse.json() : { hasPermission: false },
+      ]);
+
+      setUserPermissions({
+        canManualFeed: manualFeed.hasPermission,
+        canCreateSchedules: create.hasPermission,
+        canEditSchedules: edit.hasPermission,
+        canDeleteSchedules: deletePerms.hasPermission,
+      });
+    } catch (error) {
+      console.error("Error loading user permissions:", error);
+      setUserPermissions({
+        canManualFeed: false,
+        canCreateSchedules: false,
+        canEditSchedules: false,
+        canDeleteSchedules: false,
+      });
+    }
+  };
+
+  const loadAllCachedData = async () => {
+    setDataLoading(true);
+
+    try {
+      // Load all data in parallel
+      const [schedulesResult, sensorData, membersResult, invitationsResponse] =
+        await Promise.all([
+          getFeedingSchedules(feeder.id),
+          getAllSensorDataUnfiltered(feeder.device_id, 2000),
+          getFeederMemberships(feeder.id),
+          fetch(`/api/feeders/${feeder.id}/invitations`),
+        ]);
+
+      // Handle feeding schedules
+      if (schedulesResult.success) {
+        setFeedingSchedules(schedulesResult.schedules);
+      } else {
+        console.error("Failed to load schedules:", schedulesResult.error);
+        setFeedingSchedules([]);
+      }
+
+      // Handle sensor data
+      setRawSensorData(sensorData);
+
+      // Handle members
+      if (membersResult.success) {
+        setMembers(membersResult.memberships || []);
+      } else {
+        console.error("Failed to load members:", membersResult.error);
+        setMembers([]);
+      }
+
+      // Handle invitations
+      if (invitationsResponse.ok) {
+        const invitationsData = await invitationsResponse.json();
+        setInvitations(invitationsData.invitations || []);
+      } else {
+        console.error("Failed to load invitations");
+        setInvitations([]);
+      }
+    } catch (error) {
+      console.error("Error loading cached data:", error);
+      // Reset all data on error
+      setFeedingSchedules([]);
+      setRawSensorData([]);
+      setMembers([]);
+      setInvitations([]);
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  const handleDataRefresh = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
 
   // Check connection status on component mount and periodically
   useEffect(() => {
@@ -220,7 +394,7 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
               <span className="sm:hidden">Sync</span>
             </Button>
 
-            {canManualFeed && (
+            {userPermissions.canManualFeed && (
               <Dialog open={feedDialogOpen} onOpenChange={setFeedDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="flex items-center gap-2">
@@ -374,13 +548,21 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
 
           <TabsContent value="overview" className="space-y-6">
             {/* Feeding Schedule */}
-            <FeedingScheduleSection feederId={feeder.id} />
+            <FeedingScheduleSection
+              feederId={feeder.id}
+              schedules={feedingSchedules}
+              userPermissions={userPermissions}
+              isLoading={dataLoading}
+              onSchedulesChanged={handleDataRefresh}
+            />
 
             {/* Sensor Data Section */}
             <div className="mt-8">
               <SensorDashboard
-                deviceId={feeder.device_id}
                 feederName={feeder.name}
+                rawSensorData={rawSensorData}
+                isLoading={dataLoading}
+                onDataRefresh={handleDataRefresh}
               />
             </div>
           </TabsContent>
@@ -390,7 +572,12 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
               <PermissionsManagement
                 feederId={feeder.id}
                 feederName={feeder.name}
-                currentUserId={currentUserId}
+                currentUserRole={currentUserRole}
+                isOwner={isOwner}
+                members={members}
+                invitations={invitations}
+                isLoading={dataLoading}
+                onDataChanged={handleDataRefresh}
               />
             )}
             {!currentUserId && (
