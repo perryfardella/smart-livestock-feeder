@@ -66,7 +66,7 @@ export function InvitationStatus({
 
   useEffect(() => {
     loadInvitations();
-  }, [feederId]);
+  }, [feederId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadInvitations = async () => {
     try {

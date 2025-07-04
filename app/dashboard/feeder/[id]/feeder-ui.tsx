@@ -38,8 +38,9 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
   const [feedAmount, setFeedAmount] = useState("");
   const [isReleasingFeed, setIsReleasingFeed] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [canManualFeed, setCanManualFeed] = useState(false);
 
-  // Get current user ID
+  // Get current user ID and check permissions
   useEffect(() => {
     const getCurrentUser = async () => {
       const supabase = createClient();
@@ -48,11 +49,29 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
       } = await supabase.auth.getUser();
       if (user) {
         setCurrentUserId(user.id);
+
+        // Check if user has manual feed permission
+        try {
+          const response = await fetch(
+            `/api/feeders/${feeder.id}/permissions?permission=manual_feed_release`
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            setCanManualFeed(data.hasPermission);
+          } else {
+            console.error("Failed to check manual feed permission");
+            setCanManualFeed(false);
+          }
+        } catch (error) {
+          console.error("Error checking manual feed permission:", error);
+          setCanManualFeed(false);
+        }
       }
     };
 
     getCurrentUser();
-  }, []);
+  }, [feeder.id]);
 
   // Check connection status on component mount and periodically
   useEffect(() => {
@@ -201,49 +220,51 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
               <span className="sm:hidden">Sync</span>
             </Button>
 
-            <Dialog open={feedDialogOpen} onOpenChange={setFeedDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Utensils className="h-4 w-4" />
-                  <span className="hidden sm:inline">Release Feed</span>
-                  <span className="sm:hidden">Feed</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Release Feed - {feeder.name}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="feed-amount">Feed Amount (kg)</Label>
-                    <Input
-                      id="feed-amount"
-                      type="number"
-                      step="0.1"
-                      min="0.1"
-                      max="10"
-                      value={feedAmount}
-                      onChange={(e) => setFeedAmount(e.target.value)}
-                      placeholder="Enter amount in kg"
-                    />
+            {canManualFeed && (
+              <Dialog open={feedDialogOpen} onOpenChange={setFeedDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Utensils className="h-4 w-4" />
+                    <span className="hidden sm:inline">Release Feed</span>
+                    <span className="sm:hidden">Feed</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Release Feed - {feeder.name}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="feed-amount">Feed Amount (kg)</Label>
+                      <Input
+                        id="feed-amount"
+                        type="number"
+                        step="0.1"
+                        min="0.1"
+                        max="10"
+                        value={feedAmount}
+                        onChange={(e) => setFeedAmount(e.target.value)}
+                        placeholder="Enter amount in kg"
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setFeedDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleReleaseFeed}
+                        disabled={isReleasingFeed || !feedAmount}
+                      >
+                        {isReleasingFeed ? "Releasing..." : "Release Feed"}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setFeedDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleReleaseFeed}
-                      disabled={isReleasingFeed || !feedAmount}
-                    >
-                      {isReleasingFeed ? "Releasing..." : "Release Feed"}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            )}
 
             <Dialog>
               <DialogTrigger asChild>

@@ -171,6 +171,9 @@ export function FeedingScheduleSection({
   const [deletingScheduleId, setDeletingScheduleId] = useState<string | null>(
     null
   );
+  const [canCreateSchedules, setCanCreateSchedules] = useState(false);
+  const [canEditSchedules, setCanEditSchedules] = useState(false);
+  const [canDeleteSchedules, setCanDeleteSchedules] = useState(false);
 
   // Memoize feederId to prevent unnecessary re-renders
   const memoizedFeederId = useMemo(() => feederId, [feederId]);
@@ -195,13 +198,52 @@ export function FeedingScheduleSection({
     }
   }, [memoizedFeederId]);
 
-  // Load schedules only once on component mount
+  const checkPermissions = useCallback(async () => {
+    try {
+      // Check multiple permissions in parallel
+      const [createResponse, editResponse, deleteResponse] = await Promise.all([
+        fetch(
+          `/api/feeders/${memoizedFeederId}/permissions?permission=create_feeding_schedules`
+        ),
+        fetch(
+          `/api/feeders/${memoizedFeederId}/permissions?permission=edit_feeding_schedules`
+        ),
+        fetch(
+          `/api/feeders/${memoizedFeederId}/permissions?permission=delete_feeding_schedules`
+        ),
+      ]);
+
+      if (createResponse.ok) {
+        const createData = await createResponse.json();
+        setCanCreateSchedules(createData.hasPermission);
+      }
+
+      if (editResponse.ok) {
+        const editData = await editResponse.json();
+        setCanEditSchedules(editData.hasPermission);
+      }
+
+      if (deleteResponse.ok) {
+        const deleteData = await deleteResponse.json();
+        setCanDeleteSchedules(deleteData.hasPermission);
+      }
+    } catch (error) {
+      console.error("Error checking feeding schedule permissions:", error);
+      // Default to false for safety
+      setCanCreateSchedules(false);
+      setCanEditSchedules(false);
+      setCanDeleteSchedules(false);
+    }
+  }, [memoizedFeederId]);
+
+  // Load schedules and check permissions on component mount
   useEffect(() => {
     if (!hasLoadedInitially.current) {
       hasLoadedInitially.current = true;
       loadSchedules();
+      checkPermissions();
     }
-  }, [loadSchedules]);
+  }, [loadSchedules, checkPermissions]);
 
   const handleAddSchedule = async (
     schedule: Omit<FeedingSchedule, "id" | "feederId">
@@ -363,32 +405,34 @@ export function FeedingScheduleSection({
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Feeding Schedule</span>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Schedule
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingSchedule ? "Edit Schedule" : "Add New Schedule"}
-                </DialogTitle>
-              </DialogHeader>
-              <FeedingScheduleForm
-                schedule={editingSchedule}
-                onSubmit={
-                  editingSchedule ? handleEditSchedule : handleAddSchedule
-                }
-                onCancel={() => {
-                  setEditingSchedule(null);
-                  setIsDialogOpen(false);
-                }}
-                isSubmitting={editingSchedule ? isUpdating : isCreating}
-              />
-            </DialogContent>
-          </Dialog>
+          {canCreateSchedules && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Schedule
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingSchedule ? "Edit Schedule" : "Add New Schedule"}
+                  </DialogTitle>
+                </DialogHeader>
+                <FeedingScheduleForm
+                  schedule={editingSchedule}
+                  onSubmit={
+                    editingSchedule ? handleEditSchedule : handleAddSchedule
+                  }
+                  onCancel={() => {
+                    setEditingSchedule(null);
+                    setIsDialogOpen(false);
+                  }}
+                  isSubmitting={editingSchedule ? isUpdating : isCreating}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -436,8 +480,8 @@ export function FeedingScheduleSection({
                               {schedule.interval === "weekly"
                                 ? "week"
                                 : schedule.interval === "biweekly"
-                                ? "2 weeks"
-                                : "4 weeks"}{" "}
+                                  ? "2 weeks"
+                                  : "4 weeks"}{" "}
                               on{" "}
                               {schedule.daysOfWeek
                                 .map((day) =>
@@ -499,39 +543,43 @@ export function FeedingScheduleSection({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={
-                            deletingScheduleId === schedule.id ||
-                            isCreating ||
-                            isUpdating
-                          }
-                          onClick={() => {
-                            setEditingSchedule(schedule);
-                            setIsDialogOpen(true);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={
-                            deletingScheduleId !== null ||
-                            isCreating ||
-                            isUpdating
-                          }
-                          onClick={() =>
-                            schedule.id && handleDeleteSchedule(schedule.id)
-                          }
-                        >
-                          {deletingScheduleId === schedule.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
+                        {canEditSchedules && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={
+                              deletingScheduleId === schedule.id ||
+                              isCreating ||
+                              isUpdating
+                            }
+                            onClick={() => {
+                              setEditingSchedule(schedule);
+                              setIsDialogOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDeleteSchedules && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={
+                              deletingScheduleId !== null ||
+                              isCreating ||
+                              isUpdating
+                            }
+                            onClick={() =>
+                              schedule.id && handleDeleteSchedule(schedule.id)
+                            }
+                          >
+                            {deletingScheduleId === schedule.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

@@ -4,6 +4,8 @@ import {
   PublishCommand,
 } from "@aws-sdk/client-iot-data-plane";
 import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
+import { createClient } from "@/lib/supabase/server";
+import { requireFeederPermission } from "@/lib/utils/permissions";
 
 // Server-side environment variables (no NEXT_PUBLIC_ prefix)
 const AWS_CONFIG = {
@@ -39,6 +41,17 @@ function getIoTClient() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate user
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { topic, message } = body;
 
@@ -75,12 +88,69 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate JSON if message looks like JSON
+    let parsedMessage;
     if (message.trim().startsWith("{") || message.trim().startsWith("[")) {
       try {
-        JSON.parse(message);
+        parsedMessage = JSON.parse(message);
       } catch {
         return NextResponse.json(
           { error: "Invalid JSON format in message" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Check for manual feed commands and validate permissions
+    if (
+      parsedMessage &&
+      typeof parsedMessage === "object" &&
+      parsedMessage.manualFeedQuantity !== undefined
+    ) {
+      // Extract device ID from topic (format: "deviceId/writeDataRequest")
+      const deviceId = topic.split("/")[0];
+
+      if (!deviceId) {
+        return NextResponse.json(
+          { error: "Invalid topic format for manual feed" },
+          { status: 400 }
+        );
+      }
+
+      // Find the feeder by device ID
+      const { data: feeder, error: feederError } = await supabase
+        .from("feeders")
+        .select("id")
+        .eq("device_id", deviceId)
+        .single();
+
+      if (feederError || !feeder) {
+        return NextResponse.json(
+          { error: "Feeder not found or access denied" },
+          { status: 404 }
+        );
+      }
+
+      // Check if user has manual feed permission
+      const permissionCheck = await requireFeederPermission(
+        feeder.id,
+        "manual_feed_release",
+        user.id
+      );
+
+      if (!permissionCheck.authorized) {
+        return NextResponse.json(
+          {
+            error: permissionCheck.error || "Permission denied for manual feed",
+          },
+          { status: 403 }
+        );
+      }
+
+      // Validate feed amount
+      const feedAmount = parseFloat(parsedMessage.manualFeedQuantity);
+      if (isNaN(feedAmount) || feedAmount <= 0 || feedAmount > 10) {
+        return NextResponse.json(
+          { error: "Invalid feed amount. Must be between 0.1 and 10 kg" },
           { status: 400 }
         );
       }

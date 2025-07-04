@@ -84,7 +84,7 @@ export function FeederMembersList({
 
   useEffect(() => {
     loadMembers();
-  }, [feederId]);
+  }, [feederId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMembers = async () => {
     try {

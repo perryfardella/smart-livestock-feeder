@@ -46,7 +46,7 @@ export function PermissionsManagement({
 
   useEffect(() => {
     loadUserAccess();
-  }, [feederId, currentUserId, refreshTrigger]);
+  }, [feederId, currentUserId, refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUserAccess = async () => {
     try {
