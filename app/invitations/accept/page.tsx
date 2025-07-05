@@ -43,10 +43,25 @@ function AcceptInvitationContent() {
     try {
       const supabase = createClient();
 
+      // Check current user and JWT email
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      // Check if user is authenticated
+      if (userError || !user) {
+        setError("Please log in to view this invitation");
+        setLoading(false);
+        return;
+      }
+
       // Get invitation details by token
       const { data: invitationData, error: invitationError } = await supabase
         .from("feeder_invitations")
-        .select("id, feeder_id, invitee_email, role, status, expires_at")
+        .select(
+          "id, feeder_id, inviter_id, invitee_email, role, status, expires_at"
+        )
         .eq("invitation_token", token)
         .single();
 
@@ -63,22 +78,35 @@ function AcceptInvitationContent() {
         return;
       }
 
-      if (new Date(invitationData.expires_at) < new Date()) {
-        setError("Invitation has expired");
+      const expiresAt = new Date(invitationData.expires_at);
+      const now = new Date();
+      const isExpired = expiresAt < now;
+
+      if (isExpired) {
+        setError(`Invitation expired on ${expiresAt.toLocaleDateString()}`);
         setLoading(false);
         return;
       }
 
-      // Get feeder name separately
-      const { data: feederData } = await supabase
-        .from("feeders")
-        .select("name")
-        .eq("id", invitationData.feeder_id)
-        .single();
+      // Get feeder name and inviter email
+      const [feederResponse, inviterResponse] = await Promise.all([
+        supabase
+          .from("feeders")
+          .select("name")
+          .eq("id", invitationData.feeder_id)
+          .single(),
+        supabase.rpc("get_user_emails", {
+          user_ids: [invitationData.inviter_id],
+        }),
+      ]);
+
+      const feederName = feederResponse.data?.name || "Smart Livestock Feeder";
+      const inviterEmail = inviterResponse.data?.[0]?.email || "Unknown";
 
       setInvitation({
         ...invitationData,
-        feeder_name: feederData?.name || "Smart Livestock Feeder",
+        feeder_name: feederName,
+        inviter_name: inviterEmail,
       });
     } catch (err) {
       console.error("Error loading invitation:", err);
@@ -107,7 +135,8 @@ function AcceptInvitationContent() {
 
       if (result.success) {
         toast.success("Invitation accepted! Welcome to the team.");
-        router.push(`/dashboard/feeder/${invitation.feeder_id}`);
+        // Redirect to the feeder page
+        window.location.href = `/dashboard/feeder/${invitation.feeder_id}`;
       } else {
         toast.error(result.error || "Failed to accept invitation");
       }

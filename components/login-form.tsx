@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export function LoginForm({
@@ -25,6 +25,10 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Get redirect URL from search params
+  const redirectUrl = searchParams.get("redirect");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,8 +42,13 @@ export function LoginForm({
         password,
       });
       if (error) throw error;
+
       // Keep loading state true until redirect happens for better UX
-      router.push("/dashboard");
+      // Redirect to the original URL or default to dashboard
+      const targetUrl = redirectUrl
+        ? decodeURIComponent(redirectUrl)
+        : "/dashboard";
+      router.push(targetUrl);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
       setIsLoading(false); // Only reset loading state on error
@@ -95,7 +104,11 @@ export function LoginForm({
             <div className="mt-4 text-center text-sm">
               Don&apos;t have an account?{" "}
               <Link
-                href="/auth/sign-up"
+                href={
+                  redirectUrl
+                    ? `/auth/sign-up?redirect=${encodeURIComponent(redirectUrl)}`
+                    : "/auth/sign-up"
+                }
                 className="underline underline-offset-4"
               >
                 Sign up

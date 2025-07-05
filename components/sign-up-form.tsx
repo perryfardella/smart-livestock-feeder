@@ -35,6 +35,9 @@ export function SignUpForm({
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Get redirect URL from search params
+  const redirectUrl = searchParams.get("redirect");
+
   useEffect(() => {
     // Check for invitation parameters in URL
     const invitationToken = searchParams.get("invitation_token");
@@ -62,11 +65,16 @@ export function SignUpForm({
     }
 
     try {
+      // Determine redirect URL for email confirmation
+      const targetUrl = redirectUrl
+        ? decodeURIComponent(redirectUrl)
+        : "/dashboard";
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}${targetUrl}`,
         },
       });
       if (error) throw error;
@@ -157,7 +165,14 @@ export function SignUpForm({
             </div>
             <div className="mt-4 text-center text-sm">
               Already have an account?{" "}
-              <Link href="/auth/login" className="underline underline-offset-4">
+              <Link
+                href={
+                  redirectUrl
+                    ? `/auth/login?redirect=${encodeURIComponent(redirectUrl)}`
+                    : "/auth/login"
+                }
+                className="underline underline-offset-4"
+              >
                 Login
               </Link>
             </div>
