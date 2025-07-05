@@ -100,7 +100,7 @@ function AcceptInvitationContent() {
         }),
       ]);
 
-      const feederName = feederResponse.data?.name || "Smart Livestock Feeder";
+      const feederName = feederResponse.data?.name || "Unknown Feeder";
       const inviterEmail = inviterResponse.data?.[0]?.email || "Unknown";
 
       setInvitation({
@@ -248,8 +248,7 @@ function AcceptInvitationContent() {
           <div className="text-center space-y-2">
             <h3 className="text-lg font-semibold">{invitation.feeder_name}</h3>
             <p className="text-gray-600">
-              You&apos;ve been invited to join this feeder as a{" "}
-              <Badge className="mx-1">{invitation.role}</Badge>
+              You&apos;ve been invited to join this feeder
             </p>
           </div>
 
