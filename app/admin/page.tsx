@@ -4,6 +4,7 @@ import {
   isCurrentUserAdmin,
   getCommissionedFeeders,
 } from "@/lib/actions/commissioned-feeders";
+import { getAdminUsers } from "@/lib/actions/admin-users";
 import {
   Card,
   CardContent,
@@ -13,6 +14,8 @@ import {
 } from "@/components/ui/card";
 import { CommissionFeederForm } from "./commission-feeder-form";
 import { CommissionedFeedersTable } from "./commissioned-feeders-table";
+import { AddAdminForm } from "./add-admin-form";
+import { AdminUsersTable } from "./admin-users-table";
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -33,8 +36,9 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  // Get commissioned feeders
+  // Get commissioned feeders and admin users
   const commissionedFeeders = await getCommissionedFeeders();
+  const adminUsers = await getAdminUsers();
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -46,6 +50,31 @@ export default async function AdminPage() {
       </div>
 
       <div className="grid gap-6">
+        {/* Admin User Management Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Admin User Management</CardTitle>
+            <CardDescription>
+              Add or remove admin privileges for users. Admin users can access
+              this dashboard, commission feeders, and manage other admin users.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <AddAdminForm />
+              <div>
+                <h3 className="text-lg font-semibold mb-4">
+                  Current Admin Users
+                </h3>
+                <AdminUsersTable
+                  users={adminUsers}
+                  currentUserEmail={user.email}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Commission New Feeders Card */}
         <Card>
           <CardHeader>

@@ -1,4 +1,3 @@
 - Need performance optimisations for feeder page
 - Full permissions system + full testing system to make sure things don't regress
-- Add to the admin dashboard the ability to add someone as an admin
 - Implement DMARC
