@@ -358,10 +358,18 @@ The system defines four distinct permission roles, each with specific capabiliti
 
 ### Backend & Database
 
-- **Database:** Supabase (PostgreSQL)
+- **Database:** Supabase (PostgreSQL) - **CLOUD DEPLOYMENT ONLY**
 - **Authentication:** Supabase Auth with RLS
 - **Real-time:** Supabase subscriptions
 - **Functions:** PostgreSQL functions for performance
+
+**⚠️ IMPORTANT: Supabase Development Setup**
+
+- This project uses **Supabase cloud deployment exclusively**
+- **NO local Supabase instance** - all development connects to cloud database
+- **DO NOT run local Supabase commands** (`supabase start`, `supabase db start`, etc.)
+- Database changes are managed through cloud-based migrations
+- All `supabase/` directory files are for migration and configuration reference only
 
 ### AWS IoT Infrastructure
 
@@ -416,7 +424,8 @@ The system defines four distinct permission roles, each with specific capabiliti
 
 - Husky pre-commit hooks for code quality
 - Automated testing and build verification
-- Supabase migrations for database changes
+- Supabase migrations for database changes (**cloud-based only**)
+- **No local database setup required** - all development uses cloud Supabase instance
 
 #### Migration Guidelines
 
