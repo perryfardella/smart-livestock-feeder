@@ -37,7 +37,10 @@ import {
   type FeedingSchedule,
 } from "@/lib/actions/feeding-schedules";
 import { getFeederMemberships } from "@/lib/actions/permissions";
-import { type FeederRole } from "@/lib/utils/permissions-client";
+import {
+  type FeederRole,
+  checkBatchPermissions,
+} from "@/lib/utils/permissions-client";
 
 // Types for cached data
 interface FeederMember {
@@ -149,36 +152,18 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
 
   const loadUserPermissions = async () => {
     try {
-      const [manualFeedResponse, createResponse, editResponse, deleteResponse] =
-        await Promise.all([
-          fetch(
-            `/api/feeders/${feeder.id}/permissions?permission=manual_feed_release`
-          ),
-          fetch(
-            `/api/feeders/${feeder.id}/permissions?permission=create_feeding_schedules`
-          ),
-          fetch(
-            `/api/feeders/${feeder.id}/permissions?permission=edit_feeding_schedules`
-          ),
-          fetch(
-            `/api/feeders/${feeder.id}/permissions?permission=delete_feeding_schedules`
-          ),
-        ]);
-
-      const [manualFeed, create, edit, deletePerms] = await Promise.all([
-        manualFeedResponse.ok
-          ? manualFeedResponse.json()
-          : { hasPermission: false },
-        createResponse.ok ? createResponse.json() : { hasPermission: false },
-        editResponse.ok ? editResponse.json() : { hasPermission: false },
-        deleteResponse.ok ? deleteResponse.json() : { hasPermission: false },
+      const permissions = await checkBatchPermissions(feeder.id, [
+        "manual_feed_release",
+        "create_feeding_schedules",
+        "edit_feeding_schedules",
+        "delete_feeding_schedules",
       ]);
 
       setUserPermissions({
-        canManualFeed: manualFeed.hasPermission,
-        canCreateSchedules: create.hasPermission,
-        canEditSchedules: edit.hasPermission,
-        canDeleteSchedules: deletePerms.hasPermission,
+        canManualFeed: permissions.manual_feed_release || false,
+        canCreateSchedules: permissions.create_feeding_schedules || false,
+        canEditSchedules: permissions.edit_feeding_schedules || false,
+        canDeleteSchedules: permissions.delete_feeding_schedules || false,
       });
     } catch (error) {
       console.error("Error loading user permissions:", error);

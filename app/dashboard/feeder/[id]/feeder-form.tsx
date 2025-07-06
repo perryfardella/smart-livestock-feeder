@@ -22,6 +22,7 @@ import { Plus, Pencil } from "lucide-react";
 import { useState, useTransition, useEffect } from "react";
 import { toast } from "sonner";
 import { createFeeder, updateFeeder, type Feeder } from "@/lib/actions/feeders";
+import { checkSinglePermission } from "@/lib/utils/permissions-client";
 
 // Popular timezones, with Australian timezones prioritized for the target audience
 const TIMEZONES = [
@@ -68,15 +69,11 @@ export function FeederForm({ mode, feeder, onSuccess }: FeederFormProps) {
     const checkEditPermission = async () => {
       if (mode === "edit" && feeder) {
         try {
-          const response = await fetch(
-            `/api/feeders/${feeder.id}/permissions?permission=edit_feeder_settings`
+          const permissions = await checkSinglePermission(
+            feeder.id,
+            "edit_feeder_settings"
           );
-          if (response.ok) {
-            const data = await response.json();
-            setCanEditFeeder(data.hasPermission);
-          } else {
-            setCanEditFeeder(false);
-          }
+          setCanEditFeeder(permissions);
         } catch (error) {
           console.error("Error checking edit permission:", error);
           setCanEditFeeder(false);

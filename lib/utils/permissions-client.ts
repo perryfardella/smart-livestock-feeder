@@ -165,3 +165,60 @@ export function canInviteToRole(
   const invitableRoles = getInvitableRoles(inviterRole);
   return invitableRoles.includes(targetRole);
 }
+
+/**
+ * Check multiple permissions for a feeder in a single API call
+ * @param feederId - The feeder ID
+ * @param permissions - Array of permission strings to check
+ * @returns Promise<Record<string, boolean>> - Object with permission results
+ */
+export async function checkBatchPermissions(
+  feederId: string,
+  permissions: string[]
+): Promise<Record<string, boolean>> {
+  try {
+    const response = await fetch(`/api/feeders/${feederId}/permissions/batch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ permissions }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.permissions;
+    } else {
+      // Return all false if request fails
+      return permissions.reduce(
+        (acc, permission) => {
+          acc[permission] = false;
+          return acc;
+        },
+        {} as Record<string, boolean>
+      );
+    }
+  } catch (error) {
+    console.error("Error checking batch permissions:", error);
+    // Return all false if request fails
+    return permissions.reduce(
+      (acc, permission) => {
+        acc[permission] = false;
+        return acc;
+      },
+      {} as Record<string, boolean>
+    );
+  }
+}
+
+/**
+ * Check a single permission for a feeder
+ * @param feederId - The feeder ID
+ * @param permission - The permission to check
+ * @returns Promise<boolean> - Whether the user has the permission
+ */
+export async function checkSinglePermission(
+  feederId: string,
+  permission: string
+): Promise<boolean> {
+  const result = await checkBatchPermissions(feederId, [permission]);
+  return result[permission] || false;
+}
