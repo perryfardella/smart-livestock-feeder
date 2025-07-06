@@ -237,11 +237,7 @@ const ALL_PERMISSIONS = [
 
 ### Automated Testing
 
-Run the performance test script:
-
-```bash
-node scripts/test-batch-permissions.js
-```
+Test the batch permissions functionality directly in your browser dev tools or through the application interface.
 
 ## Best Practices
 
