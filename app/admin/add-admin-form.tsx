@@ -56,21 +56,23 @@ export function AddAdminForm() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <UserPlus className="h-5 w-5" />
+    <Card className="h-fit shadow-sm">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" />
           Add Admin User
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-sm">
           Grant admin privileges to an existing user by their email address. The
           user must already have an account in the system.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email Address *</Label>
+            <Label htmlFor="email" className="text-sm font-medium">
+              Email Address *
+            </Label>
             <Input
               id="email"
               type="email"
@@ -78,13 +80,18 @@ export function AddAdminForm() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter user's email address"
               required
+              className="text-sm"
             />
-            <p className="text-sm text-gray-500">
+            <p className="text-xs text-gray-500 leading-relaxed">
               The user must already have an account with this email address
             </p>
           </div>
 
-          <Button type="submit" disabled={isPending} className="w-full">
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="w-full h-10 text-sm font-medium"
+          >
             {isPending ? "Adding Admin..." : "Add Admin"}
           </Button>
         </form>

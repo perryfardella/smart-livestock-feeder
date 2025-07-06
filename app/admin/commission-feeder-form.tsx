@@ -107,60 +107,79 @@ export function CommissionFeederForm() {
 
   return (
     <Tabs defaultValue="single" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="single">Single Feeder</TabsTrigger>
-        <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-2 h-9">
+        <TabsTrigger value="single" className="text-sm">
+          Single Feeder
+        </TabsTrigger>
+        <TabsTrigger value="bulk" className="text-sm">
+          Bulk Upload
+        </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="single">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
+      <TabsContent value="single" className="mt-4">
+        <Card className="shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
               Commission Single Feeder
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm">
               Add a single feeder device ID to the commissioned list.
               <br />
-              <strong>Testing Mode:</strong> Multiple users can connect to the
-              same device ID.
+              <span className="inline-block mt-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md">
+                <strong>Testing Mode:</strong> Multiple users can connect to the
+                same device ID.
+              </span>
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <form onSubmit={handleSingleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="deviceId">Device ID *</Label>
+                <Label htmlFor="deviceId" className="text-sm font-medium">
+                  Device ID *
+                </Label>
                 <Input
                   id="deviceId"
                   value={deviceId}
                   onChange={(e) => setDeviceId(e.target.value)}
                   placeholder="Enter device ID (e.g., SF001234)"
                   required
+                  className="text-sm"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="batchNumber">Batch Number</Label>
+                <Label htmlFor="batchNumber" className="text-sm font-medium">
+                  Batch Number
+                </Label>
                 <Input
                   id="batchNumber"
                   value={batchNumber}
                   onChange={(e) => setBatchNumber(e.target.value)}
                   placeholder="Enter batch number (optional)"
+                  className="text-sm"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
+                <Label htmlFor="notes" className="text-sm font-medium">
+                  Notes
+                </Label>
                 <Textarea
                   id="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Enter any notes about this device (optional)"
                   rows={3}
+                  className="text-sm resize-none"
                 />
               </div>
 
-              <Button type="submit" disabled={isPending} className="w-full">
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="w-full h-10 text-sm font-medium"
+              >
                 {isPending ? "Commissioning..." : "Commission Feeder"}
               </Button>
             </form>
@@ -168,47 +187,60 @@ export function CommissionFeederForm() {
         </Card>
       </TabsContent>
 
-      <TabsContent value="bulk">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5" />
+      <TabsContent value="bulk" className="mt-4">
+        <Card className="shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Upload className="h-4 w-4 sm:h-5 sm:w-5" />
               Bulk Commission Feeders
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm">
               Upload multiple device IDs at once. Enter one device ID per line,
               or separate with commas/spaces.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <form onSubmit={handleBulkSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="bulkDeviceIds">Device IDs *</Label>
+                <Label htmlFor="bulkDeviceIds" className="text-sm font-medium">
+                  Device IDs *
+                </Label>
                 <Textarea
                   id="bulkDeviceIds"
                   value={bulkDeviceIds}
                   onChange={(e) => setBulkDeviceIds(e.target.value)}
                   placeholder={`Enter device IDs (one per line):\nSF001234\nSF001235\nSF001236`}
-                  rows={8}
+                  rows={6}
                   required
+                  className="text-sm resize-none font-mono"
                 />
-                <p className="text-sm text-gray-500">
+                <p className="text-xs text-gray-500 leading-relaxed">
                   Separate device IDs with new lines, commas, or spaces
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="bulkBatchNumber">Batch Number</Label>
+                <Label
+                  htmlFor="bulkBatchNumber"
+                  className="text-sm font-medium"
+                >
+                  Batch Number
+                </Label>
                 <Input
                   id="bulkBatchNumber"
                   value={bulkBatchNumber}
                   onChange={(e) => setBulkBatchNumber(e.target.value)}
                   placeholder="Enter batch number for all devices (optional)"
+                  className="text-sm"
                 />
               </div>
 
-              <Button type="submit" disabled={isPending} className="w-full">
-                {isPending ? "Commissioning..." : "Commission All Feeders"}
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="w-full h-10 text-sm font-medium"
+              >
+                {isPending ? "Commissioning..." : "Commission Feeders"}
               </Button>
             </form>
           </CardContent>
