@@ -371,6 +371,14 @@ The system defines four distinct permission roles, each with specific capabiliti
 - Database changes are managed through cloud-based migrations
 - All `supabase/` directory files are for migration and configuration reference only
 
+**🚨 CRITICAL: Database Reset Warning**
+
+- **NEVER run `supabase db reset`** unless absolutely critical - this will **WIPE ALL DATA**
+- Use `supabase db push` for applying migrations safely
+- The `supabase db reset` command should only be used as a last resort for development emergencies
+- Always backup data before considering any reset operation
+- AI assistants should avoid suggesting database reset commands
+
 ### AWS IoT Infrastructure
 
 - **IoT Core:** MQTT message broker
