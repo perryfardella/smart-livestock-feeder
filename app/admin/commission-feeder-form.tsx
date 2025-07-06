@@ -124,12 +124,8 @@ export function CommissionFeederForm() {
               Commission Single Feeder
             </CardTitle>
             <CardDescription className="text-sm">
-              Add a single feeder device ID to the commissioned list.
-              <br />
-              <span className="inline-block mt-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md">
-                <strong>Testing Mode:</strong> Multiple users can connect to the
-                same device ID.
-              </span>
+              Add a single feeder device ID to the commissioned list. Each
+              device ID can only be owned by one user at a time.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0">

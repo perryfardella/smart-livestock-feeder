@@ -16,7 +16,7 @@ create table if not exists public.feeders (
   user_id uuid not null references auth.users(id) on delete cascade,
   
   -- The actual hardware device ID that matches sensor_data.device_id
-  -- TODO: Add unique constraint later - currently allowing multiple users per device for testing
+  -- Note: Unique constraint added in migration 20250706000000_enforce_single_feeder_ownership.sql
   device_id text not null,
   
   -- User-friendly name for the feeder (e.g., "Chicken Coop Feeder")
@@ -53,7 +53,8 @@ create index if not exists idx_feeders_is_active
   on public.feeders(is_active);
 
 -- Composite index for user + device queries
--- TODO: Remove this index when device_id becomes unique per user
+-- Note: This index is removed in migration 20250706000000_enforce_single_feeder_ownership.sql
+-- when device_id becomes unique per user
 create index if not exists idx_feeders_user_device 
   on public.feeders(user_id, device_id);
 
@@ -109,7 +110,7 @@ comment on table public.feeders is 'Stores user-owned feeding devices with metad
 
 -- Add comments to columns for clarity
 comment on column public.feeders.user_id is 'The user who owns this feeder';
-comment on column public.feeders.device_id is 'The hardware device ID that matches sensor_data.device_id (temporarily allows duplicates for testing)';
+comment on column public.feeders.device_id is 'The hardware device ID that matches sensor_data.device_id (unique constraint enforced in migration 20250706000000)';
 comment on column public.feeders.name is 'User-friendly name for the feeder';
 comment on column public.feeders.description is 'Optional description of the feeder';
 comment on column public.feeders.location is 'Optional location description';
@@ -118,9 +119,9 @@ comment on column public.feeders.settings is 'Configuration settings stored as J
 comment on column public.feeders.created_at is 'When this feeder was added to the system';
 comment on column public.feeders.updated_at is 'When this feeder was last modified';
 
--- TODO: Future migration needed to enforce unique device ownership
--- When ready for production, create a migration to:
--- 1. Clean up duplicate device assignments
--- 2. Add unique constraint on device_id
--- 3. Remove the composite index idx_feeders_user_device
--- 4. Update application logic to handle device ownership properly 
+-- Note: Single device ownership enforcement implemented in migration 20250706000000_enforce_single_feeder_ownership.sql
+-- The migration includes:
+-- 1. Duplicate device assignment detection and resolution guidance
+-- 2. Unique constraint on device_id
+-- 3. Removal of the composite index idx_feeders_user_device
+-- 4. Updated application logic to handle device ownership properly 

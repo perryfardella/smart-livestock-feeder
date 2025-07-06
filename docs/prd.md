@@ -113,7 +113,7 @@ The SmartFeeder Web App enables hobby farmers and property owners in Australia t
   - Secure RLS policies for admin-only operations
 - **Device Inventory:**
   - Track device availability and assignment status
-  - Support for testing mode (multiple users per device)
+  - Enforcement of single device ownership (one owner per device)
   - Device orphaning and reclaiming functionality
 
 ### Dashboard ✅ **IMPLEMENTED**
@@ -455,7 +455,7 @@ The system defines four distinct permission roles, each with specific capabiliti
 - Camera feeds are placeholder implementations
 - No push notification system
 - Payment integration not implemented
-- Single-user device ownership (permissions system will enable multi-user access)
+- Single-user device ownership enforced (permissions system enables multi-user access)
 
 ### Future Roadmap
 
@@ -481,7 +481,7 @@ The system defines four distinct permission roles, each with specific capabiliti
 **A:** All MQTT communication is secured through AWS IoT Core with Cognito authentication and encrypted channels.
 
 **Q:** Can multiple users share a feeder device?  
-**A:** Yes, through the planned permissions system. Feeder owners can invite team members with different access levels (Viewer, Scheduler, Manager, Owner) to collaborate on feeder management.
+**A:** Each device can only be owned by one user, but feeder owners can invite team members with different access levels (Viewer, Scheduler, Manager) to collaborate on feeder management through the permissions system. This ensures clear ownership while enabling team collaboration.
 
 **Q:** What happens if a device goes offline?  
 **A:** The system tracks connection status and displays last communication time. Users receive notifications for extended offline periods.

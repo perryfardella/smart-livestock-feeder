@@ -20,7 +20,6 @@ The application includes an admin system for managing commissioned feeder device
 To grant admin privileges to a user:
 
 1. **Via Supabase Dashboard:**
-
    - Go to Authentication → Users
    - Find the user and edit their details
    - Set `raw_app_meta_data` to: `{"is_admin": true}`
@@ -38,14 +37,15 @@ To grant admin privileges to a user:
 - **Manage Devices:** View, edit, and delete commissioned devices
 - **Bulk Operations:** Upload multiple device IDs at once
 - **Device Validation:** Only commissioned device IDs can be used by users
-- **Testing Mode:** Currently allows multiple users per device (disabled for production)
+- **Single Ownership:** Each device can only be owned by one user at a time
 
 ### Device Validation Flow
 
 1. Admin commissions device IDs via admin panel
 2. Users can only create feeders with commissioned device IDs
 3. System validates device ID exists in commissioned feeders table
-4. (Production) Each device can only be assigned to one user
+4. Each device can only be assigned to one user (unique constraint enforced)
+5. Users can share access to feeders through the permissions system
 
 ## Development
 

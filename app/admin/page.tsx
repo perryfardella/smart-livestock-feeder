@@ -94,12 +94,8 @@ export default async function AdminPage() {
               <CardDescription className="text-sm sm:text-base">
                 Add new device IDs to the system once feeders have been
                 manufactured and commissioned. Only commissioned device IDs can
-                be used by users to create feeders.
-                <br />
-                <span className="inline-block mt-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md">
-                  <strong>Testing Mode:</strong> Multiple users can currently
-                  connect to the same device ID.
-                </span>
+                be used by users to create feeders. Each device ID can only be
+                owned by one user at a time.
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -416,8 +416,8 @@ export async function createFeeder(
         return { success: false, error: "Failed to reclaim orphaned feeder" };
       }
 
-      // TODO: Before going live, uncomment this to track device assignments
-      // Mark device as assigned
+      // Note: Device assignment tracking handled by unique constraint on device_id
+      // Uncomment the following lines if you want to track assignment status in commissioned_feeders table
       // await supabase.rpc("mark_device_assigned", {
       //   device_id_param: data.device_id,
       // });
@@ -430,24 +430,32 @@ export async function createFeeder(
     // Continue with normal creation if orphan check fails
   }
 
-  // Check if user already has a feeder with this device_id
-  const { data: existingUserFeeder, error: userFeederError } = await supabase
+  // Check if ANY user already has a feeder with this device_id
+  // With the new single ownership constraint, each device can only have one owner
+  const { data: existingFeeder, error: feederError } = await supabase
     .from("feeders")
-    .select("id")
-    .eq("user_id", user.id)
+    .select("id, user_id")
     .eq("device_id", data.device_id)
-    .single();
+    .maybeSingle();
 
-  if (userFeederError && userFeederError.code !== "PGRST116") {
-    console.error("Error checking for existing user feeder:", userFeederError);
+  if (feederError) {
+    console.error("Error checking for existing feeder:", feederError);
     return { success: false, error: "Failed to check for existing feeder" };
   }
 
-  if (existingUserFeeder) {
-    return {
-      success: false,
-      error: "You already have a feeder with this device ID",
-    };
+  if (existingFeeder) {
+    if (existingFeeder.user_id === user.id) {
+      return {
+        success: false,
+        error: "You already have a feeder with this device ID",
+      };
+    } else {
+      return {
+        success: false,
+        error:
+          "This device is already owned by another user. Each device can only have one owner. You can request access through the permissions system if needed.",
+      };
+    }
   }
 
   // No existing feeder found, create a new one
@@ -473,8 +481,8 @@ export async function createFeeder(
     return { success: false, error: "Failed to create feeder" };
   }
 
-  // TODO: Before going live, uncomment this to track device assignments
-  // Mark device as assigned in commissioned_feeders table
+  // Note: Device assignment tracking handled by unique constraint on device_id
+  // Uncomment the following lines if you want to track assignment status in commissioned_feeders table
   // await supabase.rpc("mark_device_assigned", {
   //   device_id_param: data.device_id,
   // });
@@ -599,8 +607,8 @@ export async function deleteFeeder(id: string): Promise<void> {
     throw new Error("Failed to remove feeder from your account");
   }
 
-  // TODO: Before going live, uncomment this to track device assignments
-  // Mark device as available in commissioned_feeders table
+  // Note: Device assignment tracking handled by unique constraint on device_id
+  // Uncomment the following lines if you want to track assignment status in commissioned_feeders table
   // await supabase.rpc("mark_device_available", {
   //   device_id_param: feeder.device_id,
   // });
