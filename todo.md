@@ -1,3 +1,0 @@
-- Need performance optimisations for feeder page
-- Full permissions system + full testing system to make sure things don't regress
-- Implement DMARC

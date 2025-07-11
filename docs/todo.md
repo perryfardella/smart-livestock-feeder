@@ -1,0 +1,15 @@
+- Clean up dashboard tiles, remove date added, add more relevant issues
+- remove invites when a feeder is deleted
+- fix manual feed mqtt messages not sending when amount over 10
+- make manual sync button send the feeding schedule
+- Need performance optimisations for feeder page
+- Full permissions system + full testing system to make sure things don't regress
+- Implement DMARC
+- add reset feeder button to site - write data request initialised = 0
+- Fix invite emails going to the wrong URL (localhost)
+- email a user when the've been removed from a team
+- Email a user when their permissions have changed
+- Make sure changing permissions actually works
+- Fix error where users who have been removed from a team can't be invited back
+- Fix security and performance issues in supabase dashboard
+- Look into supabase rate limiting for sending emails when we go live to prod. This is separate to resend and could cause issues
