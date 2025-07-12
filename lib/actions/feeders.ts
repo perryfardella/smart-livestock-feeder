@@ -10,6 +10,12 @@ import {
   type FeederStatus,
 } from "@/lib/utils/feeder-status";
 import { hasFeederPermission } from "@/lib/utils/permissions";
+import {
+  type FeedingSchedule,
+  type NextFeeding,
+  getNextFeedingFromSchedules,
+  formatNextFeeding,
+} from "@/lib/utils/feeding-schedule";
 
 export interface Feeder {
   id: string;
@@ -87,6 +93,11 @@ export interface FeederWithStatus extends Feeder {
   status: FeederStatus;
   user_role?: string;
   is_owner?: boolean;
+}
+
+export interface FeederWithStatusAndNextFeeding extends FeederWithStatus {
+  nextFeeding: NextFeeding | null;
+  nextFeedingFormatted: string | null;
 }
 
 export async function getUserFeedersWithConnectionStatus(): Promise<
@@ -232,7 +243,7 @@ interface DBFeederWithStatus {
 
 // Ultra-optimized version using database function (best performance)
 export async function getUserFeedersWithStatusDB(): Promise<
-  FeederWithStatus[]
+  FeederWithStatusAndNextFeeding[]
 > {
   const supabase = await createClient();
 
@@ -255,33 +266,111 @@ export async function getUserFeedersWithStatusDB(): Promise<
     throw new Error("Failed to fetch feeders");
   }
 
+  // Get all feeder IDs to fetch schedules
+  const feederIds = (data || []).map((row: DBFeederWithStatus) => row.id);
+
+  // Fetch feeding schedules for all feeders in one query
+  const { data: schedulesData, error: schedulesError } = await supabase
+    .from("feeding_schedules")
+    .select(
+      `
+      *,
+      feeding_sessions (
+        id,
+        time,
+        feed_amount
+      )
+    `
+    )
+    .in("feeder_id", feederIds)
+    .order("created_at", { ascending: false });
+
+  if (schedulesError) {
+    console.error("Error fetching feeding schedules:", schedulesError);
+    // Continue without schedules rather than failing
+  }
+
+  // Group schedules by feeder ID
+  const schedulesByFeeder: Record<string, FeedingSchedule[]> = {};
+
+  if (schedulesData) {
+    schedulesData.forEach(
+      (schedule: {
+        id: string;
+        feeder_id: string;
+        start_date: string;
+        end_date: string | null;
+        interval: string;
+        days_of_week: number[];
+        feeding_sessions: Array<{
+          id: string;
+          time: string;
+          feed_amount: string;
+        }>;
+      }) => {
+        if (!schedulesByFeeder[schedule.feeder_id]) {
+          schedulesByFeeder[schedule.feeder_id] = [];
+        }
+
+        schedulesByFeeder[schedule.feeder_id].push({
+          id: schedule.id,
+          feederId: schedule.feeder_id,
+          startDate: new Date(schedule.start_date),
+          endDate: schedule.end_date ? new Date(schedule.end_date) : undefined,
+          interval: schedule.interval as
+            | "daily"
+            | "weekly"
+            | "biweekly"
+            | "four-weekly",
+          daysOfWeek: schedule.days_of_week || [],
+          sessions:
+            schedule.feeding_sessions?.map((session) => ({
+              id: session.id,
+              time: session.time,
+              feedAmount: parseFloat(session.feed_amount),
+            })) || [],
+        });
+      }
+    );
+  }
+
   // Transform the data to match our interface
-  const feedersWithStatus: FeederWithStatus[] = (data || []).map(
-    (row: DBFeederWithStatus) => ({
-      id: row.id,
-      user_id: row.user_id,
-      device_id: row.device_id,
-      name: row.name,
-      description: row.description,
-      location: row.location,
-      timezone: row.timezone,
-      is_active: row.is_active,
-      settings: row.settings,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-      user_role: row.user_role,
-      is_owner: row.is_owner,
-      status: {
-        status: row.status as "online" | "offline",
-        isOnline: row.is_online,
-        lastCommunication: row.last_communication,
-        displayText: row.is_online ? "Online" : "Offline",
-        colorClass: row.is_online
-          ? "bg-green-100 text-green-800"
-          : "bg-red-100 text-red-800",
-        iconType: row.is_online ? "online" : "offline",
-      },
-    })
+  const feedersWithStatus: FeederWithStatusAndNextFeeding[] = (data || []).map(
+    (row: DBFeederWithStatus) => {
+      const feederSchedules = schedulesByFeeder[row.id] || [];
+      const nextFeeding = getNextFeedingFromSchedules(feederSchedules);
+      const nextFeedingFormatted = nextFeeding
+        ? formatNextFeeding(nextFeeding, row.timezone)
+        : null;
+
+      return {
+        id: row.id,
+        user_id: row.user_id,
+        device_id: row.device_id,
+        name: row.name,
+        description: row.description,
+        location: row.location,
+        timezone: row.timezone,
+        is_active: row.is_active,
+        settings: row.settings,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        user_role: row.user_role,
+        is_owner: row.is_owner,
+        status: {
+          status: row.status as "online" | "offline",
+          isOnline: row.is_online,
+          lastCommunication: row.last_communication,
+          displayText: row.is_online ? "Online" : "Offline",
+          colorClass: row.is_online
+            ? "bg-green-100 text-green-800"
+            : "bg-red-100 text-red-800",
+          iconType: row.is_online ? "online" : "offline",
+        },
+        nextFeeding,
+        nextFeedingFormatted,
+      };
+    }
   );
 
   return feedersWithStatus;

@@ -113,11 +113,11 @@ async function OptimizedFeedersList() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-blue-500" />
-                      <span className="text-sm text-gray-600">Added</span>
+                      <Calendar className="h-5 w-5 text-green-500" />
+                      <span className="text-sm text-gray-600">Next Feed</span>
                     </div>
                     <span className="text-sm font-medium">
-                      {format(new Date(feeder.created_at), "MMM d, yyyy")}
+                      {feeder.nextFeedingFormatted || "No upcoming feeds"}
                     </span>
                   </div>
 
@@ -228,12 +228,12 @@ export default async function DashboardPage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Clock className="h-5 w-5 text-blue-500" />
-                          <span className="text-sm text-gray-600">Added</span>
+                          <Calendar className="h-5 w-5 text-green-500" />
+                          <span className="text-sm text-gray-600">
+                            Next Feed
+                          </span>
                         </div>
-                        <span className="text-sm font-medium">
-                          {format(new Date(feeder.created_at), "MMM d, yyyy")}
-                        </span>
+                        <span className="text-sm font-medium">Loading...</span>
                       </div>
                       {feeder.description && (
                         <div className="text-sm text-gray-600">

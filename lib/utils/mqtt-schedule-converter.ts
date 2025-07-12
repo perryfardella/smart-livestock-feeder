@@ -1,10 +1,10 @@
-import { FeedingSchedule } from "@/app/dashboard/feeder/[id]/feeding-schedule";
+import { FeedingSchedule } from "@/lib/utils/feeding-schedule";
 
 export type MQTTScheduleEntry = [
   number, // startDate unix timestamp
   number | null, // endDate unix timestamp or null
   number, // interval in seconds
-  number // feedAmount
+  number, // feedAmount
 ];
 
 export type MQTTScheduleMessage = {
