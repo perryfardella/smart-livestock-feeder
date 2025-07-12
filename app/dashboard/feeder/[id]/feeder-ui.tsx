@@ -400,7 +400,6 @@ export function FeederUI({ feeder }: { feeder: Feeder }) {
                         type="number"
                         step="0.1"
                         min="0.1"
-                        max="10"
                         value={feedAmount}
                         onChange={(e) => setFeedAmount(e.target.value)}
                         placeholder="Enter amount in kg"

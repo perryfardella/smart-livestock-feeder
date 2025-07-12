@@ -1,6 +1,4 @@
-- Clean up dashboard tiles, remove date added, add more relevant issues
 - remove invites when a feeder is deleted
-- fix manual feed mqtt messages not sending when amount over 10
 - make manual sync button send the feeding schedule
 - Need performance optimisations for feeder page
 - Full permissions system + full testing system to make sure things don't regress
