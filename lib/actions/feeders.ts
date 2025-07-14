@@ -665,35 +665,29 @@ export async function deleteFeeder(id: string): Promise<void> {
     throw new Error("Feeder not found or access denied");
   }
 
-  // Delete all feeding schedules for this feeder
-  const { error: schedulesError } = await supabase
-    .from("feeding_schedules")
-    .delete()
-    .eq("feeder_id", id)
-    .eq("user_id", user.id);
-
-  if (schedulesError) {
-    console.error("Error deleting feeding schedules:", schedulesError);
-    throw new Error("Failed to delete feeding schedules");
-  }
-
-  // Send empty MQTT schedule to the device
+  // Send empty MQTT schedule to the device to stop any active feeding
   try {
     await sendEmptyScheduleToDevice(feeder.device_id);
   } catch (mqttError) {
     console.error("Error sending empty MQTT schedule:", mqttError);
-    // Don't throw here - we want to continue with the feeder removal even if MQTT fails
+    // Don't throw here - we want to continue with the deletion even if MQTT fails
   }
 
-  // Use the database function to orphan the feeder (bypasses RLS)
-  const { error } = await supabase.rpc("orphan_feeder", {
-    feeder_id: id,
-    requesting_user_id: user.id,
-  });
+  // Delete the feeder record - this will trigger cascade deletes for:
+  // - All feeding schedules (feeder_id -> feeders.id)
+  // - All team memberships (feeder_id -> feeders.id)
+  // - All permissions (membership_id -> feeder_memberships.id)
+  // - All invitations (feeder_id -> feeders.id)
+  // Sensor data will be preserved as it's not linked by foreign key
+  const { error: deleteError } = await supabase
+    .from("feeders")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
 
-  if (error) {
-    console.error("Error orphaning feeder:", error);
-    throw new Error("Failed to remove feeder from your account");
+  if (deleteError) {
+    console.error("Error deleting feeder:", deleteError);
+    throw new Error("Failed to delete feeder");
   }
 
   // Note: Device assignment tracking handled by unique constraint on device_id

@@ -67,12 +67,12 @@ export function DeleteFeeder({
     startTransition(async () => {
       try {
         await deleteFeeder(feeder.id);
-        toast.success("Feeder removed from your account!");
+        toast.success("Feeder deleted successfully!");
         setOpen(false);
         router.push("/dashboard");
       } catch (error) {
-        toast.error("Failed to remove feeder");
-        console.error("Error removing feeder:", error);
+        toast.error("Failed to delete feeder");
+        console.error("Error deleting feeder:", error);
       }
     });
   };
@@ -91,17 +91,29 @@ export function DeleteFeeder({
           className="flex items-center gap-2"
         >
           <Trash2 className="h-4 w-4" />
-          Remove Feeder
+          Delete Feeder
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Remove feeder from your account?</AlertDialogTitle>
+          <AlertDialogTitle>Delete feeder permanently?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will remove the feeder &ldquo;{feeder.name}&rdquo; from your
-            account, but all feeder data (feeding schedules, sensor readings)
-            will be preserved. You can reclaim this feeder later by adding the
-            same device ID again.
+            This will permanently delete the feeder &ldquo;{feeder.name}&rdquo;
+            and remove all associated data including:
+            <br />
+            <br />
+            <strong>• All team members and their access permissions</strong>
+            <br />
+            <strong>• All pending invitations</strong>
+            <br />
+            <strong>• All feeding schedules</strong>
+            <br />
+            <br />
+            Your sensor data history will be preserved and can be accessed if
+            you add this device again in the future.
+            <br />
+            <br />
+            <strong>This action cannot be undone.</strong>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -111,7 +123,7 @@ export function DeleteFeeder({
             disabled={isPending}
             className="bg-red-600 hover:bg-red-700"
           >
-            {isPending ? "Removing..." : "Remove Feeder"}
+            {isPending ? "Deleting..." : "Delete Feeder"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
